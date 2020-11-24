@@ -188,7 +188,9 @@ elif args.command[0] == 'copy':
     copy_users(args.command[1], args.command[2])
 elif args.command[0] == 'compare':
     diff_users(args.command[1], args.command[2])
-else:
+elif args.command[0] ==  'configure':
     configure()
+else:
+    usage()
 
 
