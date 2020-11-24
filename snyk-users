@@ -1,0 +1,194 @@
+#!/usr/bin/python3
+
+import requests
+import argparse
+import configparser
+import os
+# release20.10
+org_src = '4c986767-9543-43b2-85b9-2747a261fe91'
+# test-copy-users
+org_dst = 'd066d576-545d-4eb5-9164-2e6fd60e432b'
+
+snyk_url = 'https://snyk.io/api/v1'
+
+parser = argparse.ArgumentParser()
+parser.add_argument("command", nargs='+', help="\nlist, copy, compare, configure")
+parser.add_argument("-f", "--format", help="format output")
+
+args = parser.parse_args()
+
+def usage():
+    print(f"USAGE: \
+        \n    {parser.prog} list org_id [-f] all|json\tList users from org_id \
+        \n    {parser.prog} copy src dst\t\t\tCopy Users from org src to org dst \
+        \n    {parser.prog} compare [src] [dst] -f all\tCompare user list from org src and dst \
+        \n    {parser.prog} configure\t\t\t\t ")
+
+
+if args.command[0] == 'list':
+    if len(args.command) < 2:
+        usage()
+        quit()
+    if args.format != None:
+        if args.format != 'all' and args.format != 'json':
+            usage()
+            quit()
+
+if args.command[0] == 'copy' or args.command[0] == 'compare':
+    if len(args.command) < 3:
+        usage()
+        quit()
+
+def read_conf():
+    home = os.path.expanduser('~')
+    file = home + '/.snyk-users.conf'
+    config = configparser.ConfigParser()
+    config.read(file)
+    return config
+
+def configure():
+    home = os.path.expanduser('~')
+    file = home + '/.snyk-users.conf'
+    config = configparser.ConfigParser()
+    config.read(file)
+        
+    if 'group_token' in config['DEFAULT']:
+        gt = config['DEFAULT']['group_token'][-4:]
+        group_token = input(f"Group Token [...{gt}]: ")
+    else: 
+        group_token = input(f"Group Token []: ")
+    if 'group_id' in config['DEFAULT']:
+        gi = config['DEFAULT']['group_id'][-4:]
+        group_id = input(f"Group id [...{gi}]: ")
+    else:
+        group_id = input("Group Id: ")
+    if group_token != '':
+        config['DEFAULT']['group_token'] = group_token
+    if group_id != '':
+        config['DEFAULT']['group_id'] =  group_id
+    with open(file, 'w') as configfile:
+        config.write(configfile)
+
+
+def list_users(org, fmt='q'):
+    conf = read_conf()
+    url = snyk_url + '/org/' + org + '/members'
+    headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
+    res = requests.get(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    if fmt == 'json':
+        print(res.json())
+        return True
+    elif fmt == 'all':
+        for u in res.json():
+            print(f"{u['id']} {u['role']} {u['username']} {u['name']} ")
+    else:
+        for u in res.json():
+            print(f"{u['username']} {u['role']}")
+        
+    return True
+
+def diff_users(src, dst):
+    conf = read_conf()
+    url = snyk_url + '/org/' + src + '/members'
+    headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
+    res = requests.get(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    users_src = res.json()
+
+    url = snyk_url + '/org/' + dst + '/members'
+    res = requests.get(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    users_dst = res.json()
+
+    src_list = [ users_src[i]['name'] for i in range(len(users_src)) ]
+    dst_list = [ users_dst[i]['name'] for i in range(len(users_dst)) ]
+    
+    column_2_size = 10
+    column_1_size = len(src)
+
+    # get the longest list
+    if len(src) >= len(dst):
+        l1 , l2 = sorted(src_list), sorted(dst_list)
+    else:
+        l1, l2 = sorted(dst_list), sorted(src_list)
+
+    # create a set with all
+    s1 = {l1[i] for i in range(len(l1))}
+    s2 = {l2[i] for i in range(len(l2))}
+    all = s1 | s2
+
+    # print header
+    out = src
+    out += column_2_size * ' '
+    out += dst + '\n'
+    out += len(src) * '-'
+    out += column_2_size * ' '
+    out += len(dst) * '-'
+    out += '\n'
+    
+    missing_str = '--> MISSING <--'
+    for i in sorted(all):
+        if i in l1:
+            out += i
+            filler_size = (column_1_size + column_2_size) - len(i)
+        else:
+            out += missing_str
+            filler_size = (column_1_size + column_2_size) - len(missing_str)
+        out += filler_size * ' '
+        if i in l2:
+            out += i
+        else:
+            out += missing_str
+        out += '\n'
+
+    print(out)
+
+def copy_users(src, dst):
+    # get list of users from org_src
+    # for each user... 
+    # POST add member to org_dst
+    conf = read_conf()
+    url = snyk_url + '/org/' + src + '/members'
+    headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
+    res = requests.get(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    users = res.json()
+    headers['Content-Type'] = 'application/json'
+    fail = False
+    print(f"Going to copy users from {src} to {dst}")
+    group_id = conf['DEFAULT']['group_id']
+    for u in users:
+        url = snyk_url + '/group/' + group_id + '/org/' + dst + '/members'
+        payload = {'userId': u['id'], 'role': 'collaborator'}
+        res = requests.post(url, headers=headers, json=payload)
+        if res.status_code != 200:
+            print("Error: " + res.text)
+            fail = True
+        else:
+            print("Added " + u['username'])
+    
+    return not fail
+
+if args.command[0] == 'list':
+    if args.format == None:
+        fmt = 'q'
+    else:
+        fmt = args.format
+    list_users(args.command[1], fmt=fmt)
+elif args.command[0] == 'copy':
+    copy_users(args.command[1], args.command[2])
+elif args.command[0] == 'compare':
+    diff_users(args.command[1], args.command[2])
+else:
+    configure()
+
+
