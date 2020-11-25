@@ -4,38 +4,52 @@ import requests
 import argparse
 import configparser
 import os
-# release20.10
-org_src = '4c986767-9543-43b2-85b9-2747a261fe91'
-# test-copy-users
-org_dst = 'd066d576-545d-4eb5-9164-2e6fd60e432b'
 
 snyk_url = 'https://snyk.io/api/v1'
 
 parser = argparse.ArgumentParser()
-parser.add_argument("command", nargs='+', help="\nlist, copy, compare, configure")
+parser.add_argument("command", nargs='+', help="\nlist-users, copy-users, compare-users, configure, search-org, create-org, search-prj, delete-prj")
 parser.add_argument("-f", "--format", help="format output")
+parser.add_argument("-o", "--origin", help="Filter Origin")
+parser.add_argument("-n", "--name", help="Filter Name")
 
 args = parser.parse_args()
 
 def usage():
     print(f"USAGE: \
-        \n    {parser.prog} list org_id [-f] all|json\tList users from org_id \
-        \n    {parser.prog} copy src dst\t\t\tCopy Users from org src to org dst \
-        \n    {parser.prog} compare [src] [dst] -f all\tCompare user list from org src and dst \
+        \n    {parser.prog} list-users org_id [-f] all|json\t\t\t\tList users from org_id \
+        \n    {parser.prog} copy-users src dst\t\t\t\t\tCopy Users from org src to org dst \
+        \n    {parser.prog} compare-users [src] [dst] -f all\t\t\t\tCompare user list from org src and dst \
+        \n    {parser.prog} search-org [name] \t\t\t\t\tSearch org by name \
+        \n    {parser.prog} create-org [org_name] \t\t\t\t\tCreate a new org with name [org_name]\
+        \n    {parser.prog} search-prj [org_id] [-o] origin [-n] name [-f] fmt\tSearch a project in the org\
+        \n    {parser.prog} delete-prj [org_id] [prj_id]\t\t\t\tDelete project [prj_id] in the org [org_id]]\
+        \n    {parser.prog} prj-issues [org_id] [prj_id]\t\t\t\tGet aggregated issue for [prj_id] in the org [org_id]]\
         \n    {parser.prog} configure\t\t\t\t ")
 
 
-if args.command[0] == 'list':
-    if len(args.command) < 2:
+if args.command[0] == 'list-users':
+    if len(args.command) != 2:
         usage()
         quit()
     if args.format != None:
         if args.format != 'all' and args.format != 'json':
             usage()
             quit()
-
-if args.command[0] == 'copy' or args.command[0] == 'compare':
-    if len(args.command) < 3:
+if args.command[0] == 'search-prj':
+    if len(args.command) != 2:
+        usage()
+        quit()
+    if args.format != None:
+        if args.format != 'q' and args.format != 'all' and args.format != 'simple':
+            usage()
+            quit()
+if args.command[0] == 'search-orgs' or args.command[0] == 'create-org':
+    if len(args.command) != 2:
+        usage()
+        quit()
+if args.command[0] == 'copy-users' or args.command[0] == 'compare-users' or args.command[0] == 'delete-prj' or args.command[0] == 'prj-issues':
+    if len(args.command) != 3:
         usage()
         quit()
 
@@ -178,16 +192,153 @@ def copy_users(src, dst):
     
     return not fail
 
-if args.command[0] == 'list':
+def search_org(name):
+    conf = read_conf()
+    url = snyk_url + '/orgs'
+    headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
+    res = requests.get(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    out = ''
+    for o in res.json()['orgs']:
+        if name.lower() in o['name'].lower():
+            out += o['id'] + '\t\t' + o['name'] + '\n'
+
+    print(out)
+    
+def create_org(name):
+    conf = read_conf()
+    url = snyk_url + '/group/' + conf['DEFAULT']['group_id'] + '/org'
+    headers = {
+        'Authorization': 'token ' + conf['DEFAULT']['group_token'], 
+        'Content-Type': 'application/json'
+    }
+
+    payload = {'name': name}
+    res = requests.post(url, headers=headers, json=payload)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    print("ID: " + res.json()['id'])
+
+
+def search_projects(org, fmt='simple', origin='', name=''):
+    conf = read_conf()
+    url = snyk_url + '/group/' + conf['DEFAULT']['group_id'] + '/org'
+    headers = {
+        'Authorization': 'token ' + conf['DEFAULT']['group_token']
+    }
+    url = snyk_url + '/org/' + org + '/projects'
+    res = requests.get(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    projects = res.json()['projects']
+
+    # filters
+    filtered = []
+    for p in projects:
+        if origin != '' and name != '':
+            if p['origin'].lower() == origin.lower() and name.lower() in p['name'].lower():
+                filtered.append(p)
+        elif origin != '' and name == '':
+            if p['origin'].lower() == origin.lower():
+                filtered.append(p)
+        elif origin == '' and name != '':
+            if name.lower() in p['name'].lower():
+                filtered.append(p)
+        else:
+            filtered.append(p)
+    out = ''
+    # format
+    for p in filtered:
+        if fmt == 'simple':
+            out += p['id'] + '\t' + p['name'] + '\n'
+        elif fmt == 'q':
+            out += p['id'] + '\n'
+        elif fmt == 'all':
+            out += p['id'] + '\t' + p['created'] + '\t' + p['origin'] + '\t\t' + p['name'] + '\n'
+    
+    print(out)
+
+def delete_prj(org, prj):
+    conf = read_conf()
+    url = snyk_url + '/group/' + conf['DEFAULT']['group_id'] + '/org'
+    headers = {
+        'Authorization': 'token ' + conf['DEFAULT']['group_token']
+    }
+    url = snyk_url + '/org/' + org + '/project/' + prj
+    res = requests.delete(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    print("OK")
+
+def project_issues(org, prj):
+    conf = read_conf()
+    url = snyk_url + '/group/' + conf['DEFAULT']['group_id'] + '/org'
+    headers = {
+        'Authorization': 'token ' + conf['DEFAULT']['group_token'],
+        'Content-Type' : 'application/json'
+    }
+    url = snyk_url + '/org/' + org + '/project/' + prj + '/aggregated-issues'
+    res = requests.post(url, headers=headers)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    h = 0
+    m = 0
+    l = 0
+    u = 0
+    for i in res.json()['issues']:
+        if i['issueData']['severity'] == 'high':
+            h += 1
+        elif i['issueData']['severity'] == 'medium':
+            m += 1
+        elif i['issueData']['severity'] == 'low':
+            l += 1
+        else:
+            u += 1
+    out = 'High: ' + str(h) + '\nMedium: ' + str(m) + '\nLow: ' + str(l)
+    if u > 0:
+        out += '\nUnknown: ' + str(u)
+    print(out)
+
+
+
+if args.command[0] == 'list-users':
     if args.format == None:
         fmt = 'q'
     else:
         fmt = args.format
     list_users(args.command[1], fmt=fmt)
-elif args.command[0] == 'copy':
+elif args.command[0] == 'copy-users':
     copy_users(args.command[1], args.command[2])
-elif args.command[0] == 'compare':
+elif args.command[0] == 'compare-users':
     diff_users(args.command[1], args.command[2])
+elif args.command[0] == 'search-org':
+    search_org(args.command[1])
+elif args.command[0] == 'create-org':
+    create_org(args.command[1])
+elif args.command[0] == 'delete-prj':
+    delete_prj(args.command[1], args.command[2])
+elif args.command[0] == 'prj-issues':
+    project_issues(args.command[1], args.command[2])
+elif args.command[0] == 'search-prj':
+    if args.format == None:
+        fmt = 'simple'
+    else:
+        fmt = args.format
+    if args.origin == None:
+        origin = ''
+    else:
+        origin = args.origin
+    if args.name == None:
+        name = ''
+    else:
+        name = args.name
+    search_projects(args.command[1], fmt, origin, name)
 elif args.command[0] ==  'configure':
     configure()
 else:
