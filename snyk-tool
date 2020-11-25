@@ -12,6 +12,8 @@ parser.add_argument("command", nargs='+', help="\nlist-users, copy-users, compar
 parser.add_argument("-f", "--format", help="format output")
 parser.add_argument("-o", "--origin", help="Filter Origin")
 parser.add_argument("-n", "--name", help="Filter Name")
+parser.add_argument("-d", "--delete", help="Filter Name")
+
 
 args = parser.parse_args()
 
@@ -223,7 +225,7 @@ def create_org(name):
     print("ID: " + res.json()['id'])
 
 
-def search_projects(org, fmt='simple', origin='', name=''):
+def search_projects(org, fmt='simple', origin='', name='', delete=False):
     conf = read_conf()
     url = snyk_url + '/group/' + conf['DEFAULT']['group_id'] + '/org'
     headers = {
@@ -250,8 +252,15 @@ def search_projects(org, fmt='simple', origin='', name=''):
                 filtered.append(p)
         else:
             filtered.append(p)
-    out = ''
+
+    # no need to format    
+    if delete:
+        for p in filtered:
+            delete_prj(org, p['id'])
+        return True
+
     # format
+    out = ''
     for p in filtered:
         if fmt == 'simple':
             out += p['id'] + '\t' + p['name'] + '\n'
@@ -273,7 +282,7 @@ def delete_prj(org, prj):
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
-    print("OK")
+    print(prj + " DELETED")
 
 def project_issues(org, prj):
     conf = read_conf()
@@ -338,7 +347,10 @@ elif args.command[0] == 'search-prj':
         name = ''
     else:
         name = args.name
-    search_projects(args.command[1], fmt, origin, name)
+    delete = False
+    if args.delete == 'true':
+        delete = True
+    search_projects(args.command[1], fmt, origin, name, delete)
 elif args.command[0] ==  'configure':
     configure()
 else:
