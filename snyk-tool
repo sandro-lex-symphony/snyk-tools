@@ -31,6 +31,7 @@ def usage():
         \n    {parser.prog} ignore-issue [org_id] [prj_id] [issue_id] \t\tIgnore issue [issue_id] for [prj_id] in the org [org_id]]\
         \n    {parser.prog} delete-ignore-issue [org_id] [prj_id] [issue_id] \t\tDelete ignore issue [issue_id] for [prj_id] in the org [org_id]]\
         \n    {parser.prog} search-issue-org [org_id] [issue_id] \t\t\tSearch for projects with [issue_id] in the org [org_id]]\
+        \n    {parser.prog} group-ignore-issue [issue_id] \t\tIgnore issue [issue_id] for all organisations in the group\
         \n    {parser.prog} configure\t\t\t\t ")
 
 
@@ -42,6 +43,10 @@ if args.command[0] == 'list-users':
         if args.format != 'all' and args.format != 'json':
             usage()
             quit()
+if args.command[0] == 'group-ignore-issue':
+    if len(args.command) != 2:
+        usage()
+        quit()
 if args.command[0] == 'search-prj':
     if len(args.command) != 2:
         usage()
@@ -222,13 +227,19 @@ def copy_users(src, dst):
     
     return not fail
 
-def search_org(name):
+def get_orgs():
     conf = read_conf()
     url = snyk_url + '/orgs'
     headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
     res = requests.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
+        return False
+    return res
+
+def search_org(name):
+    res = get_orgs()
+    if res == False:
         return False
     out = ''
     for o in res.json()['orgs']:
@@ -253,7 +264,7 @@ def create_org(name):
     print("ID: " + res.json()['id'])
 
 
-def _search_projects(org, fmt='simple', origin='', name='', delete=False):
+def _search_projects(org):
     conf = read_conf()
     url = snyk_url + '/group/' + conf['DEFAULT']['group_id'] + '/org'
     headers = {
@@ -267,7 +278,7 @@ def _search_projects(org, fmt='simple', origin='', name='', delete=False):
     return res.json()['projects']
 
 def search_projects(org, fmt='simple', origin='', name='', delete=False):
-    projects = _search_projects(org, fmt, origin, name, delete)
+    projects = _search_projects(org)
     if project == False:
         return False
 
@@ -371,7 +382,7 @@ def search_issue_org(org, issue):
     # for each prj ... 
     #    search for issue id
     
-    projects = _search_projects(org, fmt='simple', origin='', name='', delete=False)
+    projects = _search_projects(org)
     if projects == False:
         return False
     present = 0
@@ -404,6 +415,25 @@ def delete_ignore_issue(org, prj, issue):
         print("Error: " + res.text)
         return False
     print("OK")
+
+def ignore_issue_group(issue):
+    # get list of orgs
+    # for each org
+    #    get list of prjs
+    #    for each prjs
+    #        set ignore issue
+    orgs = get_orgs()
+    if orgs == False:
+        return False
+    for o in orgs.json()['orgs']:
+        #projects = _search_projects(o['id'])
+        #if projects == False:
+        #    return False
+        #qtde = len(projects)
+        #print(o['name'] + ' ---> ' + str(qtde))
+        search_issue_org(o['id'], issue)
+
+    #print(orgs.json())
 
 
 def add_ignore_issue(org, prj, issue):
@@ -451,6 +481,8 @@ elif args.command[0] == 'delete-ignore-issue':
     delete_ignore_issue(args.command[1], args.command[2], args.command[3])
 elif args.command[0] == 'search-issue-org':
     search_issue_org(args.command[1], args.command[2])
+elif args.command[0] == 'group-ignore-issue':
+    ignore_issue_group(args.command[1])
 elif args.command[0] == 'prj-issues':
     if args.format == None:
         fmt='aggregate'
