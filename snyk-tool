@@ -32,9 +32,16 @@ def usage():
         \n    {parser.prog} delete-ignore-issue [org_id] [prj_id] [issue_id] \t\tDelete ignore issue [issue_id] for [prj_id] in the org [org_id]]\
         \n    {parser.prog} search-issue-org [org_id] [issue_id] \t\t\tSearch for projects with [issue_id] in the org [org_id]]\
         \n    {parser.prog} group-ignore-issue [issue_id] \t\tIgnore issue [issue_id] for all organisations in the group\
+        \n    {parser.prog} count-projects \t\t\t\t\t\tCount projects \
+        \n    {parser.prog} count-org-issues [org_id] \t\t\t\t\t\tCount projects \
+        \n    {parser.prog} count-issues  \t\t\t\t\t\tCount projects \
         \n    {parser.prog} configure\t\t\t\t ")
 
 
+if args.command[0] == 'count-org-issues':
+    if len(args.command) != 2:
+        usage()
+        quit()
 if args.command[0] == 'list-users':
     if len(args.command) != 2:
         usage()
@@ -279,7 +286,7 @@ def _search_projects(org):
 
 def search_projects(org, fmt='simple', origin='', name='', delete=False):
     projects = _search_projects(org)
-    if project == False:
+    if projects == False:
         return False
 
     # filters
@@ -436,6 +443,59 @@ def ignore_issue_group(issue):
     #print(orgs.json())
 
 
+def get_depedencies(org, prj):
+    url = 'org/orgId/dependencies'
+    conf = read_conf()
+    headers = {
+        'Authorization': 'token ' + conf['DEFAULT']['group_token'],
+        'Content-Type' : 'application/json'
+    }
+    url = snyk_url + '/org/' + org + '/dependencies'
+    payload = {
+        'filters': {
+            'projects': [ prj ]
+            }
+    }
+    res = requests.post(url, headers=headers, json=payload)
+    if res.status_code != 200:
+        print("Error: " + res.text)
+        return False
+    return res
+
+
+
+def count_issues(org_id):
+    total_projects = 0
+    total_issues = 0
+    total_deps = 0
+    projects = _search_projects(org_id)
+    for p in projects:
+        res = get_project_issues(org_id, p['id'])
+        if res.status_code != 200:
+            print("Error: " + res.text)
+            return False
+        issues = len(res.json()['issues'])
+        total_issues += issues
+
+        deps = get_depedencies(org_id, p['id'])
+        deps = deps.json()['total']
+        total_deps += deps
+        print(p['name'] + '\t' + str(deps)  + '\t' + str(issues))
+
+    total_projects += len(projects)
+
+    print('TOTAL: \t' + str(total_projects) + '\t' + str(total_deps) + '\t' + str(total_issues))    
+
+def _count_prjs():
+    total = 0
+    orgs = get_orgs()
+    for o in orgs.json()['orgs']:
+        projects = _search_projects(o['id'])
+        print(o['name'] + '\t' + str(len(projects)))
+        total += len(projects)
+
+    print('TOTAL: \t' + str(total))    
+
 def add_ignore_issue(org, prj, issue):
     conf = read_conf()
     url = snyk_url + '/group/' + conf['DEFAULT']['group_id'] + '/org'
@@ -467,6 +527,12 @@ elif args.command[0] == 'copy-users':
     copy_users(args.command[1], args.command[2])
 elif args.command[0] == 'list-orgs':
     list_orgs()
+elif args.command[0] == 'count-org-issues':
+    count_issues(args.command[1])
+elif args.command[0] == 'count-issues':
+    count_group_issues()
+elif args.command[0] == 'count-projects':
+    count_prjs()
 elif args.command[0] == 'compare-users':
     diff_users(args.command[1], args.command[2])
 elif args.command[0] == 'search-org':
