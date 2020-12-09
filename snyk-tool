@@ -534,7 +534,7 @@ def count_group_issues():
             rm = 0
             rl = 0 
             ru = 0
-        print(f"{o['name']} \t\t {tp} \t {td} \t {ti} \t {th} \t {tm} \t {tl} \t {tu} \t {r:0.6f} \t {rh:0.6f} \t {rm:0.6f} \t {rl:0.6f} \t {rl:0.6f}")       
+        print(f"{o['name']} \t\t {tp} \t {td} \t {ti} \t {th} \t {tm} \t {tl} \t {tu} \t {r:0.6f} \t {rh:0.6f} \t {rm:0.6f} \t {rl:0.6f}")       
 
 def _count_prjs():
     total = 0
