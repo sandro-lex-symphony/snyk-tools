@@ -14,6 +14,7 @@ parser.add_argument("-o", "--origin", help="Filter Origin")
 parser.add_argument("-n", "--name", help="Filter Name")
 parser.add_argument("-d", "--delete", help="Filter Name")
 
+session = requests.Session()
 
 args = parser.parse_args()
 
@@ -114,23 +115,28 @@ def configure():
         config.write(configfile)
 
 
-def list_orgs():
+def _get_orgs():
     conf = read_conf()
     url = snyk_url + '/orgs'
     headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
-    res = requests.get(url, headers=headers)
+    res = session.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
+    return res
+
+def list_orgs():
+    res = _get_orgs()
+    if res.status_code != 200:
+        return False
     for u in res.json()['orgs']:
         print (u['id'] + '\t' + u['name'])
-   
 
 def list_users(org, fmt='q'):
     conf = read_conf()
     url = snyk_url + '/org/' + org + '/members'
     headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
-    res = requests.get(url, headers=headers)
+    res = session.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -150,14 +156,14 @@ def diff_users(src, dst):
     conf = read_conf()
     url = snyk_url + '/org/' + src + '/members'
     headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
-    res = requests.get(url, headers=headers)
+    res = session.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
     users_src = res.json()
 
     url = snyk_url + '/org/' + dst + '/members'
-    res = requests.get(url, headers=headers)
+    res = session.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -213,7 +219,7 @@ def copy_users(src, dst):
     conf = read_conf()
     url = snyk_url + '/org/' + src + '/members'
     headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
-    res = requests.get(url, headers=headers)
+    res = session.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -225,7 +231,7 @@ def copy_users(src, dst):
     for u in users:
         url = snyk_url + '/group/' + group_id + '/org/' + dst + '/members'
         payload = {'userId': u['id'], 'role': 'collaborator'}
-        res = requests.post(url, headers=headers, json=payload)
+        res = session.post(url, headers=headers, json=payload)
         if res.status_code != 200:
             print("Error: " + res.text)
             fail = True
@@ -238,7 +244,7 @@ def get_orgs():
     conf = read_conf()
     url = snyk_url + '/orgs'
     headers = {'Authorization': 'token ' + conf['DEFAULT']['group_token']}
-    res = requests.get(url, headers=headers)
+    res = session.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -264,7 +270,7 @@ def create_org(name):
     }
 
     payload = {'name': name}
-    res = requests.post(url, headers=headers, json=payload)
+    res = session.post(url, headers=headers, json=payload)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -278,7 +284,7 @@ def _search_projects(org):
         'Authorization': 'token ' + conf['DEFAULT']['group_token']
     }
     url = snyk_url + '/org/' + org + '/projects'
-    res = requests.get(url, headers=headers)
+    res = session.get(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -329,8 +335,9 @@ def delete_prj(org, prj):
         'Authorization': 'token ' + conf['DEFAULT']['group_token']
     }
     url = snyk_url + '/org/' + org + '/project/' + prj
-    res = requests.delete(url, headers=headers)
+    res = session.delete(url, headers=headers)
     if res.status_code != 200:
+        print(res.status_code)
         print("Error: " + res.text)
         return False
     print(prj + " DELETED")
@@ -344,7 +351,7 @@ def get_project_issues(org, prj):
         'Content-Type' : 'application/json'
     }
     url = snyk_url + '/org/' + org + '/project/' + prj + '/aggregated-issues'
-    res = requests.post(url, headers=headers)
+    res = session.post(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -417,7 +424,7 @@ def delete_ignore_issue(org, prj, issue):
         'Content-Type' : 'application/json'
     }
     url = snyk_url + '/org/' + org + '/project/' + prj + '/ignore/' + issue
-    res = requests.delete(url, headers=headers)
+    res = session.delete(url, headers=headers)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
@@ -456,8 +463,9 @@ def get_depedencies(org, prj):
             'projects': [ prj ]
             }
     }
-    res = requests.post(url, headers=headers, json=payload)
+    res = session.post(url, headers=headers, json=payload)
     if res.status_code != 200:
+        print(res.status_code)
         print("Error: " + res.text)
         return False
     return res
@@ -465,26 +473,68 @@ def get_depedencies(org, prj):
 
 
 def count_issues(org_id):
+    total_projects, total_deps, total_issues, ratio = _count_issues(org_id, verbose=True)
+    print(f"TOTAL: \t  {total_projects} \t {total_deps} \t {total_issues} \t  {ratio:0.6f}")    
+
+def _count_issues(org_id, verbose=True):
     total_projects = 0
     total_issues = 0
     total_deps = 0
+    th = 0
+    tm = 0
+    tl = 0
+    tu = 0
     projects = _search_projects(org_id)
     for p in projects:
         res = get_project_issues(org_id, p['id'])
-        if res.status_code != 200:
-            print("Error: " + res.text)
+        if res == False:
             return False
         issues = len(res.json()['issues'])
         total_issues += issues
+        h = 0
+        m = 0
+        l = 0
+        u = 0
+        for i in res.json()['issues']:
+            if i['issueData']['severity'] == 'high':
+                th += 1
+            elif i['issueData']['severity'] == 'medium':
+                tm += 1
+            elif i['issueData']['severity'] == 'low':
+                tl += 1
+            else:
+                tu += 1
 
         deps = get_depedencies(org_id, p['id'])
         deps = deps.json()['total']
         total_deps += deps
-        print(p['name'] + '\t' + str(deps)  + '\t' + str(issues))
+        if verbose:
+            print(p['name'] + '\t' + str(deps)  + '\t' + str(issues))
 
     total_projects += len(projects)
-
-    print('TOTAL: \t' + str(total_projects) + '\t' + str(total_deps) + '\t' + str(total_issues))    
+    #ratio = 0
+    #if total_deps != 0:
+    #    ratio = total_issues / total_deps
+    
+    return total_projects, total_deps, total_issues, th, tm, tl, tu
+    
+def count_group_issues():
+    orgs = _get_orgs()
+    for o in orgs.json()['orgs']:
+        tp, td, ti, th, tm, tl, tu = _count_issues(o['id'], verbose=False)
+        if td != 0:
+            r = ti / td
+            rh = th / td
+            rm = tm / td
+            rl = tl / td
+            tu = tu / td
+        else:
+            r = 0
+            rh = 0
+            rm = 0
+            rl = 0 
+            ru = 0
+        print(f"{o['name']} \t\t {tp} \t {td} \t {ti} \t {th} \t {tm} \t {tl} \t {tu} \t {r:0.6f} \t {rh:0.6f} \t {rm:0.6f} \t {rl:0.6f} \t {rl:0.6f}")       
 
 def _count_prjs():
     total = 0
@@ -510,7 +560,7 @@ def add_ignore_issue(org, prj, issue):
         'reasonType': 'not-vulnerable',
         'disregardIfFixable': False
     }
-    res = requests.post(url, headers=headers, json=payload)
+    res = session.post(url, headers=headers, json=payload)
     if res.status_code != 200:
         print("Error: " + res.text)
         return False
