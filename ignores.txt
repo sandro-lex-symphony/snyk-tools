@@ -1,0 +1,2 @@
+https://snyk.io/vuln/SNYK-JAVA-JUNIT-1017047
+https://app.snyk.io/vuln/SNYK-JAVA-IONETTY-1042268
