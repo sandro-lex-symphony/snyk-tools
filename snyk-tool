@@ -12,7 +12,8 @@ parser.add_argument("command", nargs='+', help="\nlist-users, copy-users, compar
 parser.add_argument("-f", "--format", help="format output")
 parser.add_argument("-o", "--origin", help="Filter Origin")
 parser.add_argument("-n", "--name", help="Filter Name")
-parser.add_argument("-d", "--delete", help="Filter Name")
+parser.add_argument("-d", "--delete", help="Delete matches")
+parser.add_argument("-q", "--quiet", help="Quiet, only Ids")
 
 session = requests.Session()
 
@@ -24,7 +25,7 @@ def usage():
         \n    {parser.prog} list-users org_id [-f] all|json\t\t\t\tList users from org_id \
         \n    {parser.prog} copy-users src dst\t\t\t\t\tCopy Users from org src to org dst \
         \n    {parser.prog} compare-users [src] [dst] -f all\t\t\t\tCompare user list from org src and dst \
-        \n    {parser.prog} search-org [name] \t\t\t\t\tSearch org by name \
+        \n    {parser.prog} search-org [name] -q\t\t\t\t\tSearch org by name \
         \n    {parser.prog} create-org [org_name] \t\t\t\t\tCreate a new org with name [org_name]\
         \n    {parser.prog} search-prj [org_id] [-o] origin [-n] name [-f] fmt\tSearch a project in the org\
         \n    {parser.prog} delete-prj [org_id] [prj_id]\t\t\t\tDelete project [prj_id] in the org [org_id]]\
@@ -35,10 +36,15 @@ def usage():
         \n    {parser.prog} group-ignore-issue [issue_id] \t\tIgnore issue [issue_id] for all organisations in the group\
         \n    {parser.prog} count-projects \t\t\t\t\t\tCount projects \
         \n    {parser.prog} count-org-issues [org_id] \t\t\t\t\t\tCount projects \
+        \n    {parser.prog} search-global-prj [prj_name] \t\t\t\t\t\tSearch projects in all orgs\
         \n    {parser.prog} count-issues  \t\t\t\t\t\tCount projects \
         \n    {parser.prog} configure\t\t\t\t ")
 
 
+if args.command[0] == 'search-global-prj':
+    if len(args.command) != 2:
+        usage()
+        quit()
 if args.command[0] == 'count-org-issues':
     if len(args.command) != 2:
         usage()
@@ -125,12 +131,15 @@ def _get_orgs():
         return False
     return res
 
-def list_orgs():
+def list_orgs(fmt='all'):
     res = _get_orgs()
     if res.status_code != 200:
         return False
     for u in res.json()['orgs']:
-        print (u['id'] + '\t' + u['name'])
+        if fmt == 'quiet':
+            print(u['id'])
+        else:
+            print (u['id'] + '\t' + u['name'])
 
 def list_users(org, fmt='q'):
     conf = read_conf()
@@ -250,16 +259,24 @@ def get_orgs():
         return False
     return res
 
-def search_org(name):
+def _search_org(name):
     res = get_orgs()
     if res == False:
         return False
-    out = ''
+    out = []
     for o in res.json()['orgs']:
         if name.lower() in o['name'].lower():
-            out += o['id'] + '\t\t' + o['name'] + '\n'
+            out.append(o)
+    return out
 
-    print(out)
+def search_org(name, fmt='all'):
+    orgs = _search_org(name)
+    out = ''
+    for o in orgs:
+        if fmt == 'quiet':
+            print(o['id'])
+        else:
+            print(o['id'] + '\t\t' + o['name'])
     
 def create_org(name):
     conf = read_conf()
@@ -275,6 +292,16 @@ def create_org(name):
         print("Error: " + res.text)
         return False
     print("ID: " + res.json()['id'])
+
+
+def search_global_prj(prj_name):
+    orgs = _get_orgs()
+    for o in orgs.json()['orgs']:
+        prjs = _search_projects(o['id'])
+        if prjs != False and len(prjs) > 0:
+            for p in prjs:
+                if prj_name.lower() in p['name'].lower():
+                    print(p['name'] + '\t' + p['id'] + '\t' + o['name'] + '\t' + o['id'])
 
 
 def _search_projects(org):
@@ -473,8 +500,8 @@ def get_depedencies(org, prj):
 
 
 def count_issues(org_id):
-    total_projects, total_deps, total_issues, ratio = _count_issues(org_id, verbose=True)
-    print(f"TOTAL: \t  {total_projects} \t {total_deps} \t {total_issues} \t  {ratio:0.6f}")    
+    total_projects, total_deps, total_issues, th, tm, tl, tu = _count_issues(org_id, verbose=True)
+    print(f"TOTAL: \t  {total_projects} \t {total_deps} \t {total_issues} \t  {th} \t {tm} \t {tl} \t{tu}")    
 
 def _count_issues(org_id, verbose=True):
     total_projects = 0
@@ -536,7 +563,7 @@ def count_group_issues():
             ru = 0
         print(f"{o['name']} \t\t {tp} \t {td} \t {ti} \t {th} \t {tm} \t {tl} \t {tu} \t {r:0.6f} \t {rh:0.6f} \t {rm:0.6f} \t {rl:0.6f}")       
 
-def _count_prjs():
+def count_prjs():
     total = 0
     orgs = get_orgs()
     for o in orgs.json()['orgs']:
@@ -576,7 +603,10 @@ if args.command[0] == 'list-users':
 elif args.command[0] == 'copy-users':
     copy_users(args.command[1], args.command[2])
 elif args.command[0] == 'list-orgs':
-    list_orgs()
+    fmt = 'all'
+    if args.quiet == 'true':
+        fmt = 'quiet'
+    list_orgs(fmt)
 elif args.command[0] == 'count-org-issues':
     count_issues(args.command[1])
 elif args.command[0] == 'count-issues':
@@ -586,7 +616,10 @@ elif args.command[0] == 'count-projects':
 elif args.command[0] == 'compare-users':
     diff_users(args.command[1], args.command[2])
 elif args.command[0] == 'search-org':
-    search_org(args.command[1])
+    fmt = 'all'
+    if args.quiet == 'true':
+        fmt = 'quiet'
+    search_org(args.command[1], fmt)
 elif args.command[0] == 'create-org':
     create_org(args.command[1])
 elif args.command[0] == 'delete-prj':
@@ -622,6 +655,8 @@ elif args.command[0] == 'search-prj':
     if args.delete == 'true':
         delete = True
     search_projects(args.command[1], fmt, origin, name, delete)
+elif args.command[0] == 'search-global-prj':
+    search_global_prj(args.command[1])
 elif args.command[0] ==  'configure':
     configure()
 else:
