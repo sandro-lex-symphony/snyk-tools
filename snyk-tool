@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+# For mac
+###!/Library/Frameworks/Python.framework/Versions/3.8/bin/python3
+
 import requests
 import argparse
 import configparser
@@ -32,10 +35,10 @@ def usage():
         \n    {parser.prog} ignore-issue [org_id] [prj_id] [issue_id] \t\tIgnore issue [issue_id] for [prj_id] in the org [org_id]]\
         \n    {parser.prog} delete-ignore-issue [org_id] [prj_id] [issue_id] \t\tDelete ignore issue [issue_id] for [prj_id] in the org [org_id]]\
         \n    {parser.prog} search-issue-org [org_id] [issue_id] \t\t\tSearch for projects with [issue_id] in the org [org_id]]\
-        \n    {parser.prog} group-ignore-issue [issue_id] \t\tIgnore issue [issue_id] for all organisations in the group\
+        \n    {parser.prog} group-ignore-issue [issue_id] \t\t\t\tIgnore issue [issue_id] for all organisations in the group\
         \n    {parser.prog} count-projects \t\t\t\t\t\tCount projects \
-        \n    {parser.prog} count-org-issues [org_id] \t\t\t\t\t\tCount projects \
-        \n    {parser.prog} count-issues  \t\t\t\t\t\tCount projects \
+        \n    {parser.prog} count-org-issues [org_id] \t\t\t\tCount issues for an Org \
+        \n    {parser.prog} count-issues  \t\t\t\t\t\tCount Issues for all Orgs \
         \n    {parser.prog} configure\t\t\t\t ")
 
 
