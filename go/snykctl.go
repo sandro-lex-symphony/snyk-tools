@@ -2,6 +2,7 @@ package main
 
 import (
     "bufio"
+    "flag"
 	"fmt"
 	"log"
 	"os"
@@ -13,7 +14,10 @@ func main() {
 		fmt.Println("Missing args")
 		os.Exit(1)
 	}
-	switch os.Args[1] {
+    quietFlag := flag.Bool("q", false, "Quiet output")
+    flag.Parse()
+
+	switch flag.Arg(0) {
 	case "configure":
         token := snykTool.GetToken()
         group_id := snykTool.GetGroupId()
@@ -48,15 +52,19 @@ func main() {
             fmt.Printf("%s\t%s\n", org.Id, org.Name)
         }
 	case "search-org":
-		result, err := snykTool.SearchOrgs(os.Args[2])
+		result, err := snykTool.SearchOrgs(flag.Arg(1))
 		if err != nil {
             log.Fatal(err)
         }
 		for _, org := range result.Orgs {
-			fmt.Printf("%s\t%s\n", org.Id, org.Name)
+		    if *quietFlag {
+                fmt.Printf("%s\n", org.Id)
+            } else {
+			    fmt.Printf("%s\t%s\n", org.Id, org.Name)
+            }
 		}
 	case "list-projects":
-        result, err := snykTool.GetProjects(os.Args[2])
+        result, err := snykTool.GetProjects(flag.Arg(1))
         if err != nil {
             log.Fatal(err)
         }
