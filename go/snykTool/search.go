@@ -41,6 +41,22 @@ func ListUsers(org_id string) ([]*User, error) {
     return result, nil
 }
 
+func SearchProjects(org_id string, term string) (*ProjectsResult, error) {
+    result, err := GetProjects(org_id)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    var filtered ProjectsResult
+    for _, prj := range(result.Projects) {
+        if  strings.Contains(strings.ToLower(prj.Name), strings.ToLower(term)) {
+           filtered.Projects = append(filtered.Projects, prj)
+        }
+    }
+
+    return &filtered, nil
+}
+
 func GetProjects(org_id string) (*ProjectsResult, error) {
     timeout := time.Duration(5 * time.Second)
     client := http.Client {
@@ -60,7 +76,7 @@ func GetProjects(org_id string) (*ProjectsResult, error) {
 
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
-        return nil, fmt.Errorf("ListUsers failed %s", resp.Status)
+        return nil, fmt.Errorf("GetProjects failed %s", resp.Status)
     }
 
     var result ProjectsResult

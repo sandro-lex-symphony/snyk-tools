@@ -79,5 +79,17 @@ func main() {
                 fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
             }
         }
+    case "search-projects":
+        result, err := snykTool.SearchProjects(flag.Arg(1), flag.Arg(2))
+        if err != nil {
+            log.Fatal(err)
+        }
+        for _, prj := range(result.Projects) {
+            if *quietFlag {
+                fmt.Printf("%s\n", prj.Id)
+            } else {
+                fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
+            }
+        }
 	}
 }
