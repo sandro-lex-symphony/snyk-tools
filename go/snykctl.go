@@ -49,7 +49,11 @@ func main() {
 	        log.Fatal(err)
         }
         for _, org := range result.Orgs {
-            fmt.Printf("%s\t%s\n", org.Id, org.Name)
+            if *quietFlag {
+                fmt.Printf("%s\n", org.Id)
+            } else {
+                fmt.Printf("%s\t%s\n", org.Id, org.Name)
+            }
         }
 	case "search-org":
 		result, err := snykTool.SearchOrgs(flag.Arg(1))
@@ -69,7 +73,11 @@ func main() {
             log.Fatal(err)
         }
         for _, prj := range result.Projects {
-            fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
+            if *quietFlag {
+                fmt.Printf("%s\n", prj.Id)
+            } else {
+                fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
+            }
         }
 	}
 }
