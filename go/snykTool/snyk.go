@@ -19,6 +19,14 @@ type User struct {
     Username string
 }
 
+type CreateOrgResult struct {
+    Id string
+    name string
+    slug string
+    url string
+    created string
+}
+
 type ProjectsResult struct {
     Org
     Projects []*Project

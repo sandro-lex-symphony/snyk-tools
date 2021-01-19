@@ -67,6 +67,13 @@ func main() {
 			    fmt.Printf("%s\t%s\n", org.Id, org.Name)
             }
 		}
+	case "create-org":
+        result, err := snykTool.CreateOrg(flag.Arg(1))
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("%s\n", result.Id)
+
 	case "list-projects":
         result, err := snykTool.GetProjects(flag.Arg(1))
         if err != nil {

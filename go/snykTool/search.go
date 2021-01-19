@@ -1,6 +1,7 @@
 package snykTool
 
 import (
+    "bytes"
     "encoding/json"
     "fmt"
     "log"
@@ -89,6 +90,37 @@ func GetProjects(org_id string) (*ProjectsResult, error) {
     return &result, nil
 }
 
+func CreateOrg(org_name string) (*CreateOrgResult, error) {
+    timeout := time.Duration(5 * time.Second)
+    client := http.Client{
+        Timeout: timeout,
+    }
+    jsonValue, _ := json.Marshal(map[string]string{
+        "name": org_name,
+    })
+
+    request, err := http.NewRequest("POST", SnykURL + "/org", bytes.NewBuffer(jsonValue))
+    request.Header.Set("Content-Type", "application/json")
+    token := GetToken()
+    request.Header.Set("Authorization", "token " + token)
+    resp, err := client.Do(request)
+    if err != nil {
+        return nil, err
+    }
+    if resp.StatusCode != http.StatusCreated {
+        resp.Body.Close()
+        return nil, fmt.Errorf("CreateOrg failed %s", resp.Status)
+    }
+
+    var result CreateOrgResult
+    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+        resp.Body.Close()
+        return nil, err
+    }
+    resp.Body.Close()
+    return &result, nil
+
+}
 
 func GetOrgs() (*OrgList, error) {
     timeout := time.Duration(5 * time.Second)
