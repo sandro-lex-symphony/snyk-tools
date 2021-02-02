@@ -15,6 +15,7 @@ func main() {
 		os.Exit(1)
 	}
     quietFlag := flag.Bool("q", false, "Quiet output")
+    nameOnlyFlag := flag.Bool("n", false, "Names only output")
     flag.Parse()
 
 	switch flag.Arg(0) {
@@ -82,6 +83,8 @@ func main() {
         for _, prj := range result.Projects {
             if *quietFlag {
                 fmt.Printf("%s\n", prj.Id)
+            } else if *nameOnlyFlag {
+                fmt.Printf("%s\n", prj.Name)
             } else {
                 fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
             }
@@ -98,5 +101,46 @@ func main() {
                 fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
             }
         }
+    case "list-project-issues":
+        result, err := snykTool.GetProjectIssues(flag.Arg(1), flag.Arg(2))
+        if err != nil {
+            log.Fatal(err)
+        }
+        for _, issue := range(result.Issues) {
+            fmt.Printf("%s\t%s\t%s\n", issue.Id, issue.PkgName, issue.IssueData.Severity)
+        }
+    case "report-org-issues":
+        // get all prjs for the  org
+        // for each prj get all the issues
+        // count sevs
+        result, err := snykTool.GetProjects(flag.Arg(1))
+        if err != nil {
+            log.Fatal(err)
+        }
+        var h int
+        var m int
+        var l int
+        var prjs int
+        for _, project := range result.Projects {
+            prjs += 1
+            res, err := snykTool.GetProjectIssues(flag.Arg(1), project.Id)
+            if err != nil {
+                log.Fatal(err)
+            }
+            for _, issue := range(res.Issues) {
+                if "high" == issue.IssueData.Severity {
+                    h += 1
+                } else if "medium" == issue.IssueData.Severity {
+                    m += 1
+                } else {
+                    l += 1
+                }
+            }
+        }
+        fmt.Println("P:", prjs)
+        fmt.Println("H: ", h)
+        fmt.Println("M: ", m)
+        fmt.Println("L: ", l)
+
 	}
 }

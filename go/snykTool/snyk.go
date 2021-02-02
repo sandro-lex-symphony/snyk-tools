@@ -37,3 +37,23 @@ type Project struct {
     Id string
 }
 
+type ProjectIssuesResult struct {
+    Issues []*Issue
+}
+
+type Issue struct {
+    Id string
+    PkgName string
+    PkgVersion string
+    IssueData IssueData
+}
+
+type IssueData struct {
+    Id string
+    Title string
+    Severity string
+    ExploitMaturity string
+    CVSSv3 string
+    CvssScore float32
+}
+

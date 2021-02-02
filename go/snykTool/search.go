@@ -58,8 +58,41 @@ func SearchProjects(org_id string, term string) (*ProjectsResult, error) {
     return &filtered, nil
 }
 
+
+func GetProjectIssues(org_id string, prj_id string) (*ProjectIssuesResult, error) {
+    timeout := time.Duration(10 * time.Second)
+    client := http.Client {
+        Timeout: timeout,
+    }
+
+    request, err := http.NewRequest("POST", SnykURL + "/org/" + org_id + "/project/" + prj_id + "/aggregated-issues", nil)
+    token := GetToken()
+    request.Header.Set("Content-Type", "application/json")
+    request.Header.Set("Authorization", "token " + token)
+    if err != nil {
+        log.Fatal(err)
+    }
+    resp, err := client.Do(request)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if resp.StatusCode != http.StatusOK {
+        resp.Body.Close()
+        return nil, fmt.Errorf("GetProjectIssues failed %s", resp.Status)
+    }
+
+    var result ProjectIssuesResult
+    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+        resp.Body.Close()
+        return nil, err
+    }
+    resp.Body.Close()
+    return &result, nil
+}
+
+
 func GetProjects(org_id string) (*ProjectsResult, error) {
-    timeout := time.Duration(5 * time.Second)
+    timeout := time.Duration(10 * time.Second)
     client := http.Client {
         Timeout: timeout,
     }
