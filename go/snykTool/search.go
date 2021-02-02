@@ -10,12 +10,14 @@ import (
     "time"
 )
 
-func ListUsers(org_id string) ([]*User, error) {
+
+
+func RequestGet(path string) (*http.Response) {
     timeout := time.Duration(5 * time.Second)
     client := http.Client {
         Timeout: timeout,
     }
-    request, err := http.NewRequest("GET", SnykURL + "/org/" + org_id + "/members", nil)
+    request, err := http.NewRequest("GET", SnykURL + path, nil)
     token := GetToken()
     request.Header.Set("Authorization", "token " + token)
     if err != nil {
@@ -24,8 +26,14 @@ func ListUsers(org_id string) ([]*User, error) {
 
     resp, err := client.Do(request)
     if err != nil {
-        return nil, err
+        log.Fatal(err)
     }
+    return resp
+}
+
+
+func ListUsers(org_id string) ([]*User, error) {
+    resp := RequestGet("/org/" + org_id + "/members")
 
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
@@ -92,21 +100,7 @@ func GetProjectIssues(org_id string, prj_id string) (*ProjectIssuesResult, error
 
 
 func GetProjects(org_id string) (*ProjectsResult, error) {
-    timeout := time.Duration(10 * time.Second)
-    client := http.Client {
-        Timeout: timeout,
-    }
-    request, err := http.NewRequest("GET", SnykURL + "/org/" + org_id + "/projects", nil)
-    token := GetToken()
-    request.Header.Set("Authorization", "token " + token)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    resp, err := client.Do(request)
-    if err != nil {
-        return nil, err
-    }
+    resp := RequestGet("/org/" + org_id + "/projects")
 
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
@@ -156,22 +150,8 @@ func CreateOrg(org_name string) (*CreateOrgResult, error) {
 }
 
 func GetOrgs() (*OrgList, error) {
-    timeout := time.Duration(5 * time.Second)
-    client := http.Client{
-        Timeout: timeout,
-    }
-    request, err := http.NewRequest("GET", SnykURL + "/orgs", nil)
-    token := GetToken()
-    request.Header.Set("Authorization", "token " + token)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    resp, err := client.Do(request)
-    if err != nil {
-        return nil, err
-    }
-
+    resp := RequestGet("/orgs")
+ 
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
         return nil, fmt.Errorf("GetOrgs failed %s", resp.Status)
