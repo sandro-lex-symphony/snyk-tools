@@ -44,6 +44,21 @@ func main() {
         for _, user := range result {
             fmt.Printf("%s\t%s\t%s\n", user.Id, user.Role, user.Name)
         }
+    case "list-group-users":
+        result, err := snykTool.GetGroupMembers()
+        if err != nil {
+            log.Fatal(err)
+        }
+  
+        for _, user := range result {
+            if *quietFlag {
+                fmt.Printf("%s\n", user.Id)
+            } else if *nameOnlyFlag {
+                fmt.Printf("%s\n", user.Email)
+            } else {  
+                fmt.Printf("%s\t%s\n", user.Id, user.Email)
+            }
+        }
     case "list-orgs":
 	    result, err := snykTool.GetOrgs()
 	    if err != nil {

@@ -19,6 +19,11 @@ type User struct {
     Username string
 }
 
+type GroupMember struct {
+    Id string
+    Email string
+}
+
 type CreateOrgResult struct {
     Id string
     name string

@@ -32,6 +32,24 @@ func RequestGet(path string) (*http.Response) {
 }
 
 
+
+func GetGroupMembers() ([]*GroupMember, error) {
+    group := GetGroupId()
+    resp := RequestGet("/group/" + group + "/members")
+    if resp.StatusCode != http.StatusOK {
+        resp.Body.Close()
+        return nil, fmt.Errorf("GetGroupMembers failed %s", resp.Status)
+    }
+    var result []*GroupMember
+    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+        resp.Body.Close()
+        return nil, err
+    }
+    resp.Body.Close()
+    return result, nil
+}
+
+
 func ListUsers(org_id string) ([]*User, error) {
     resp := RequestGet("/org/" + org_id + "/members")
 
