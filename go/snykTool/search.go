@@ -10,15 +10,25 @@ import (
     "time"
 )
 
+var Debug bool
 
+func SetDebug(d bool) {
+    Debug = d
+}
+
+func IsDebug() bool {
+    return Debug
+}
 
 func RequestGet(path string) (*http.Response) {
-    timeout := time.Duration(5 * time.Second)
+    timeout := time.Duration(10 * time.Second)
     client := http.Client {
         Timeout: timeout,
     }
     req := SnykURL + path
-    //fmt.Println(req)
+    if IsDebug() {
+        fmt.Println(req)
+    }
     request, err := http.NewRequest("GET", req, nil)
     token := GetToken()
     request.Header.Set("Authorization", "token " + token)
