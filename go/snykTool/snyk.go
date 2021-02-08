@@ -19,6 +19,11 @@ type User struct {
     Username string
 }
 
+type GroupMember struct {
+    Id string
+    Email string
+}
+
 type CreateOrgResult struct {
     Id string
     name string
@@ -26,6 +31,23 @@ type CreateOrgResult struct {
     url string
     created string
 }
+
+type Ignore struct {
+    Reason string
+    Created string
+    Expires string
+    reasonType string
+    IgnoredBy GroupMember
+}
+
+type IgnoreResult struct {
+    Id string
+    Content Ignore
+}
+type IgnoreStar struct {
+    Star Ignore `json:"*"`
+}
+
 
 type ProjectsResult struct {
     Org

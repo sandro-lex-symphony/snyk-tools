@@ -6,17 +6,36 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"snykTool"
+    "snykTool"
+    "time"
 )
+
+func usage() {
+    fmt.Printf("Usage:\n" +
+                "\tconfigure\n" +
+                "\tlist-users [org] [prj]\n" +
+                "\tlist-group-users\n" +
+                "\tlist-orgs\n" +
+                "\tsearch-org [name]\n" +
+                "\tcreate-org [name]\n" +
+                "\tlist-projects [org]\n" +
+                "\tsearch-projects [org]\n" +
+                "\tlist-project-issues [org] [prj]\n" +
+                "\treport-org-issues [org]\n")
+}
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Missing args")
+        usage()
 		os.Exit(1)
 	}
     quietFlag := flag.Bool("q", false, "Quiet output")
     nameOnlyFlag := flag.Bool("n", false, "Names only output")
+    debugFlag := flag.Bool("d", false, "Debug http requests")
     flag.Parse()
+    if *debugFlag {
+        snykTool.SetDebug(true)
+    }
 
 	switch flag.Arg(0) {
 	case "configure":
@@ -35,7 +54,10 @@ func main() {
             group_id = text[:len(text) -1]
         }
 
+       
+
         snykTool.WriteConf(token, group_id)
+
     case "list-users":
         result, err := snykTool.ListUsers(os.Args[2])
         if err != nil {
@@ -43,6 +65,21 @@ func main() {
         }
         for _, user := range result {
             fmt.Printf("%s\t%s\t%s\n", user.Id, user.Role, user.Name)
+        }
+    case "list-group-users":
+        result, err := snykTool.GetGroupMembers()
+        if err != nil {
+            log.Fatal(err)
+        }
+  
+        for _, user := range result {
+            if *quietFlag {
+                fmt.Printf("%s\n", user.Id)
+            } else if *nameOnlyFlag {
+                fmt.Printf("%s\n", user.Email)
+            } else {  
+                fmt.Printf("%s\t%s\n", user.Id, user.Email)
+            }
         }
     case "list-orgs":
 	    result, err := snykTool.GetOrgs()
@@ -101,6 +138,58 @@ func main() {
                 fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
             }
         }
+    case "list-project-ignores":
+        res := snykTool.GetProjectIgnores(flag.Arg(1), flag.Arg(2))
+        for i := 0; i < len(res); i++ {
+            if *quietFlag {
+                fmt.Printf("%s\n", res[i].Id)
+            } else {
+                fmt.Printf("%s\t%s\t%s\t%s\t\n", res[i].Id, res[i].Content.Created, res[i].Content.IgnoredBy.Email, res[i].Content.Reason)
+            }
+        }
+    case "list-org-ignores":
+        result, err := snykTool.GetProjects(flag.Arg(1))
+        if err != nil {
+            log.Fatal(err)
+        }
+        for _, prj := range result.Projects {
+            res := snykTool.GetProjectIgnores(flag.Arg(1), prj.Id)
+            for i := 0; i < len(res); i++ {
+                if *quietFlag {
+                    fmt.Printf("%s\n", res[i].Id)
+                } else {
+                    fmt.Printf("%s\t%s\t%s\n", prj.Name, res[i].Id, res[i].Content.Created)
+                }
+            }
+        }
+    case "list-group-ignores":
+        // doing sequential because of the rate limiting on snyk api
+        result, err := snykTool.GetOrgs()
+	    if err != nil {
+	        log.Fatal(err)
+        }
+        for _, org := range result.Orgs {
+            if ! *quietFlag {
+                fmt.Printf("========= %s =======\n", org.Name)
+            }
+            result_prj, err := snykTool.GetProjects(org.Id)
+            if err != nil {
+                log.Fatal(err)
+            }
+            for _, prj := range result_prj.Projects {
+                result_ignores := snykTool.GetProjectIgnores(org.Id, prj.Id)
+                for i := 0; i < len(result_ignores); i++ {
+                    if *quietFlag {
+                        fmt.Printf("%s\n", result_ignores[i].Id)
+                    } else {
+                        fmt.Printf("%s\t%s\t%s\t%s\n", org.Name, prj.Name, result_ignores[i].Id, result_ignores[i].Content.Created)
+                    }
+                }
+            }
+            // sleep for rate limit
+            time.Sleep(1 * time.Second)
+        }
+        
     case "list-project-issues":
         result, err := snykTool.GetProjectIssues(flag.Arg(1), flag.Arg(2))
         if err != nil {

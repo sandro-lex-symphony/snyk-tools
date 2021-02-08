@@ -10,12 +10,26 @@ import (
     "time"
 )
 
-func ListUsers(org_id string) ([]*User, error) {
-    timeout := time.Duration(5 * time.Second)
+var Debug bool
+
+func SetDebug(d bool) {
+    Debug = d
+}
+
+func IsDebug() bool {
+    return Debug
+}
+
+func RequestGet(path string) (*http.Response) {
+    timeout := time.Duration(10 * time.Second)
     client := http.Client {
         Timeout: timeout,
     }
-    request, err := http.NewRequest("GET", SnykURL + "/org/" + org_id + "/members", nil)
+    req := SnykURL + path
+    if IsDebug() {
+        fmt.Println(req)
+    }
+    request, err := http.NewRequest("GET", req, nil)
     token := GetToken()
     request.Header.Set("Authorization", "token " + token)
     if err != nil {
@@ -24,8 +38,32 @@ func ListUsers(org_id string) ([]*User, error) {
 
     resp, err := client.Do(request)
     if err != nil {
+        log.Fatal(err)
+    }
+    return resp
+}
+
+
+
+func GetGroupMembers() ([]*GroupMember, error) {
+    group := GetGroupId()
+    resp := RequestGet("/group/" + group + "/members")
+    if resp.StatusCode != http.StatusOK {
+        resp.Body.Close()
+        return nil, fmt.Errorf("GetGroupMembers failed %s", resp.Status)
+    }
+    var result []*GroupMember
+    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+        resp.Body.Close()
         return nil, err
     }
+    resp.Body.Close()
+    return result, nil
+}
+
+
+func ListUsers(org_id string) ([]*User, error) {
+    resp := RequestGet("/org/" + org_id + "/members")
 
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
@@ -58,6 +96,38 @@ func SearchProjects(org_id string, term string) (*ProjectsResult, error) {
     return &filtered, nil
 }
 
+func GetProjectIgnores(org_id string, prj_id string) ([]IgnoreResult) {
+    resp := RequestGet("/org/" + org_id + "/project/" + prj_id + "/ignores")
+
+    if resp.StatusCode != http.StatusOK {
+        resp.Body.Close()
+        log.Fatal("Get Ignores failed ", resp.Status)
+    }
+    
+    var ignore_result map[string][]IgnoreStar
+
+    if err := json.NewDecoder(resp.Body).Decode(&ignore_result); err != nil {
+        resp.Body.Close()
+        log.Fatal(err)
+    }
+
+    var result []IgnoreResult
+
+    for key, value := range ignore_result {
+        for i := 0; i < len(value); i++ {
+            // fmt.Println(value[i].Star.Reason)
+            // fmt.Println(value[i].Star.Created)
+            // fmt.Println(value[i].Star.IgnoredBy.Email)
+            var ii IgnoreResult
+            ii.Id = key
+            ii.Content = value[i].Star
+            result = append(result, ii)
+        }
+    }
+
+    resp.Body.Close()
+    return result
+}
 
 func GetProjectIssues(org_id string, prj_id string) (*ProjectIssuesResult, error) {
     timeout := time.Duration(10 * time.Second)
@@ -92,21 +162,7 @@ func GetProjectIssues(org_id string, prj_id string) (*ProjectIssuesResult, error
 
 
 func GetProjects(org_id string) (*ProjectsResult, error) {
-    timeout := time.Duration(10 * time.Second)
-    client := http.Client {
-        Timeout: timeout,
-    }
-    request, err := http.NewRequest("GET", SnykURL + "/org/" + org_id + "/projects", nil)
-    token := GetToken()
-    request.Header.Set("Authorization", "token " + token)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    resp, err := client.Do(request)
-    if err != nil {
-        return nil, err
-    }
+    resp := RequestGet("/org/" + org_id + "/projects")
 
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
@@ -156,22 +212,8 @@ func CreateOrg(org_name string) (*CreateOrgResult, error) {
 }
 
 func GetOrgs() (*OrgList, error) {
-    timeout := time.Duration(5 * time.Second)
-    client := http.Client{
-        Timeout: timeout,
-    }
-    request, err := http.NewRequest("GET", SnykURL + "/orgs", nil)
-    token := GetToken()
-    request.Header.Set("Authorization", "token " + token)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    resp, err := client.Do(request)
-    if err != nil {
-        return nil, err
-    }
-
+    resp := RequestGet("/orgs")
+ 
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
         return nil, fmt.Errorf("GetOrgs failed %s", resp.Status)
