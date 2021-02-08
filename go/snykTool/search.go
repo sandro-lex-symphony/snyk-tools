@@ -17,7 +17,9 @@ func RequestGet(path string) (*http.Response) {
     client := http.Client {
         Timeout: timeout,
     }
-    request, err := http.NewRequest("GET", SnykURL + path, nil)
+    req := SnykURL + path
+    //fmt.Println(req)
+    request, err := http.NewRequest("GET", req, nil)
     token := GetToken()
     request.Header.Set("Authorization", "token " + token)
     if err != nil {
@@ -84,6 +86,38 @@ func SearchProjects(org_id string, term string) (*ProjectsResult, error) {
     return &filtered, nil
 }
 
+func GetProjectIgnores(org_id string, prj_id string) ([]IgnoreResult) {
+    resp := RequestGet("/org/" + org_id + "/project/" + prj_id + "/ignores")
+
+    if resp.StatusCode != http.StatusOK {
+        resp.Body.Close()
+        log.Fatal("Get Ignores failed ", resp.Status)
+    }
+    
+    var ignore_result map[string][]IgnoreStar
+
+    if err := json.NewDecoder(resp.Body).Decode(&ignore_result); err != nil {
+        resp.Body.Close()
+        log.Fatal(err)
+    }
+
+    var result []IgnoreResult
+
+    for key, value := range ignore_result {
+        for i := 0; i < len(value); i++ {
+            // fmt.Println(value[i].Star.Reason)
+            // fmt.Println(value[i].Star.Created)
+            // fmt.Println(value[i].Star.IgnoredBy.Email)
+            var ii IgnoreResult
+            ii.Id = key
+            ii.Content = value[i].Star
+            result = append(result, ii)
+        }
+    }
+
+    resp.Body.Close()
+    return result
+}
 
 func GetProjectIssues(org_id string, prj_id string) (*ProjectIssuesResult, error) {
     timeout := time.Duration(10 * time.Second)

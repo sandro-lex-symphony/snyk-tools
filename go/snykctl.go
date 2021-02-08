@@ -9,9 +9,23 @@ import (
 	"snykTool"
 )
 
+func usage() {
+    fmt.Printf("Usage:\n" +
+                "\tconfigure\n" +
+                "\tlist-users [org] [prj]\n" +
+                "\tlist-group-users\n" +
+                "\tlist-orgs\n" +
+                "\tsearch-org [name]\n" +
+                "\tcreate-org [name]\n" +
+                "\tlist-projects [org]\n" +
+                "\tsearch-projects [org]\n" +
+                "\tlist-project-issues [org] [prj]\n" +
+                "\treport-org-issues [org]\n")
+}
+
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Missing args")
+        usage()
 		os.Exit(1)
 	}
     quietFlag := flag.Bool("q", false, "Quiet output")
@@ -114,6 +128,30 @@ func main() {
                 fmt.Printf("%s\n", prj.Id)
             } else {
                 fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
+            }
+        }
+    case "list-project-ignores":
+        res := snykTool.GetProjectIgnores(flag.Arg(1), flag.Arg(2))
+        for i := 0; i < len(res); i++ {
+            if *quietFlag {
+                fmt.Printf("%s\n", res[i].Id)
+            } else {
+                fmt.Printf("%s\t%s\t%s\t%s\t\n", res[i].Id, res[i].Content.Created, res[i].Content.IgnoredBy.Email, res[i].Content.Reason)
+            }
+        }
+    case "list-org-ignores":
+        result, err := snykTool.GetProjects(flag.Arg(1))
+        if err != nil {
+            log.Fatal(err)
+        }
+        for _, prj := range result.Projects {
+            res := snykTool.GetProjectIgnores(flag.Arg(1), prj.Id)
+            for i := 0; i < len(res); i++ {
+                if *quietFlag {
+                    fmt.Printf("%s\n", res[i].Id)
+                } else {
+                    fmt.Printf("%s\t%s\t%s\n", prj.Name, res[i].Id, res[i].Content.Created)
+                }
             }
         }
     case "list-project-issues":

@@ -32,6 +32,23 @@ type CreateOrgResult struct {
     created string
 }
 
+type Ignore struct {
+    Reason string
+    Created string
+    Expires string
+    reasonType string
+    IgnoredBy GroupMember
+}
+
+type IgnoreResult struct {
+    Id string
+    Content Ignore
+}
+type IgnoreStar struct {
+    Star Ignore `json:"*"`
+}
+
+
 type ProjectsResult struct {
     Org
     Projects []*Project
