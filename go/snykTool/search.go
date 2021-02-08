@@ -11,6 +11,18 @@ import (
 )
 
 var Debug bool
+var Timeout int
+
+func SetTimeout(t int) {
+    Timeout = t
+}
+
+func GetTimeout() int {
+    if Timeout > 0 {
+        return Timeout
+    }
+    return 10
+}
 
 func SetDebug(d bool) {
     Debug = d
@@ -21,7 +33,8 @@ func IsDebug() bool {
 }
 
 func RequestGet(path string) (*http.Response) {
-    timeout := time.Duration(10 * time.Second)
+
+    timeout := time.Duration(time.Duration(GetTimeout()) * time.Second)
     client := http.Client {
         Timeout: timeout,
     }
@@ -44,15 +57,14 @@ func RequestGet(path string) (*http.Response) {
 }
 
 
-
-func GetGroupMembers() ([]*GroupMember, error) {
+func GetGroupMembers() ([]*User, error) {
     group := GetGroupId()
     resp := RequestGet("/group/" + group + "/members")
     if resp.StatusCode != http.StatusOK {
         resp.Body.Close()
         return nil, fmt.Errorf("GetGroupMembers failed %s", resp.Status)
     }
-    var result []*GroupMember
+    var result []*User
     if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
         resp.Body.Close()
         return nil, err
@@ -115,9 +127,6 @@ func GetProjectIgnores(org_id string, prj_id string) ([]IgnoreResult) {
 
     for key, value := range ignore_result {
         for i := 0; i < len(value); i++ {
-            // fmt.Println(value[i].Star.Reason)
-            // fmt.Println(value[i].Star.Created)
-            // fmt.Println(value[i].Star.IgnoredBy.Email)
             var ii IgnoreResult
             ii.Id = key
             ii.Content = value[i].Star
@@ -130,7 +139,7 @@ func GetProjectIgnores(org_id string, prj_id string) ([]IgnoreResult) {
 }
 
 func GetProjectIssues(org_id string, prj_id string) (*ProjectIssuesResult, error) {
-    timeout := time.Duration(10 * time.Second)
+    timeout := time.Duration(time.Duration(GetTimeout()) * time.Second)
     client := http.Client {
         Timeout: timeout,
     }
@@ -180,7 +189,7 @@ func GetProjects(org_id string) (*ProjectsResult, error) {
 }
 
 func CreateOrg(org_name string) (*CreateOrgResult, error) {
-    timeout := time.Duration(5 * time.Second)
+    timeout := time.Duration(time.Duration(GetTimeout()) * time.Second)
     client := http.Client{
         Timeout: timeout,
     }

@@ -32,9 +32,22 @@ func main() {
     quietFlag := flag.Bool("q", false, "Quiet output")
     nameOnlyFlag := flag.Bool("n", false, "Names only output")
     debugFlag := flag.Bool("d", false, "Debug http requests")
+    timeoutFlag := flag.Int("t", 10, "Http timeout")
     flag.Parse()
     if *debugFlag {
         snykTool.SetDebug(true)
+    }
+
+    if *quietFlag {
+        snykTool.SetQuiet(true)
+    }
+
+    if *nameOnlyFlag {
+        snykTool.SetNameOnly(true)
+    }
+
+    if *timeoutFlag != 10 {
+        snykTool.SetTimeout(*timeoutFlag)
     }
 
 	switch flag.Arg(0) {
@@ -54,8 +67,6 @@ func main() {
             group_id = text[:len(text) -1]
         }
 
-       
-
         snykTool.WriteConf(token, group_id)
 
     case "list-users":
@@ -63,48 +74,29 @@ func main() {
         if err != nil {
             log.Fatal(err)
         }
-        for _, user := range result {
-            fmt.Printf("%s\t%s\t%s\n", user.Id, user.Role, user.Name)
-        }
+        snykTool.FormatUser(result)
+        
     case "list-group-users":
         result, err := snykTool.GetGroupMembers()
         if err != nil {
             log.Fatal(err)
         }
+        snykTool.FormatUser(result)
   
-        for _, user := range result {
-            if *quietFlag {
-                fmt.Printf("%s\n", user.Id)
-            } else if *nameOnlyFlag {
-                fmt.Printf("%s\n", user.Email)
-            } else {  
-                fmt.Printf("%s\t%s\n", user.Id, user.Email)
-            }
-        }
     case "list-orgs":
 	    result, err := snykTool.GetOrgs()
 	    if err != nil {
 	        log.Fatal(err)
         }
-        for _, org := range result.Orgs {
-            if *quietFlag {
-                fmt.Printf("%s\n", org.Id)
-            } else {
-                fmt.Printf("%s\t%s\n", org.Id, org.Name)
-            }
-        }
+        snykTool.FormatOrg(result)
+
 	case "search-org":
 		result, err := snykTool.SearchOrgs(flag.Arg(1))
 		if err != nil {
             log.Fatal(err)
         }
-		for _, org := range result.Orgs {
-		    if *quietFlag {
-                fmt.Printf("%s\n", org.Id)
-            } else {
-			    fmt.Printf("%s\t%s\n", org.Id, org.Name)
-            }
-		}
+        snykTool.FormatOrg(result)
+
 	case "create-org":
         result, err := snykTool.CreateOrg(flag.Arg(1))
         if err != nil {
@@ -117,36 +109,19 @@ func main() {
         if err != nil {
             log.Fatal(err)
         }
-        for _, prj := range result.Projects {
-            if *quietFlag {
-                fmt.Printf("%s\n", prj.Id)
-            } else if *nameOnlyFlag {
-                fmt.Printf("%s\n", prj.Name)
-            } else {
-                fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
-            }
-        }
+        snykTool.FormatProjects(result)
+        
     case "search-projects":
         result, err := snykTool.SearchProjects(flag.Arg(1), flag.Arg(2))
         if err != nil {
             log.Fatal(err)
         }
-        for _, prj := range(result.Projects) {
-            if *quietFlag {
-                fmt.Printf("%s\n", prj.Id)
-            } else {
-                fmt.Printf("%s\t%s\n", prj.Id, prj.Name)
-            }
-        }
+        snykTool.FormatProjects(result)
+
     case "list-project-ignores":
         res := snykTool.GetProjectIgnores(flag.Arg(1), flag.Arg(2))
-        for i := 0; i < len(res); i++ {
-            if *quietFlag {
-                fmt.Printf("%s\n", res[i].Id)
-            } else {
-                fmt.Printf("%s\t%s\t%s\t%s\t\n", res[i].Id, res[i].Content.Created, res[i].Content.IgnoredBy.Email, res[i].Content.Reason)
-            }
-        }
+        snykTool.FormatProjectIgnore(res)
+       
     case "list-org-ignores":
         result, err := snykTool.GetProjects(flag.Arg(1))
         if err != nil {
@@ -154,14 +129,12 @@ func main() {
         }
         for _, prj := range result.Projects {
             res := snykTool.GetProjectIgnores(flag.Arg(1), prj.Id)
-            for i := 0; i < len(res); i++ {
-                if *quietFlag {
-                    fmt.Printf("%s\n", res[i].Id)
-                } else {
-                    fmt.Printf("%s\t%s\t%s\n", prj.Name, res[i].Id, res[i].Content.Created)
-                }
+            if !snykTool.IsQuiet() {
+                fmt.Printf("====> %s\n", prj.Name)
             }
+            snykTool.FormatProjectIgnore(res)
         }
+
     case "list-group-ignores":
         // doing sequential because of the rate limiting on snyk api
         result, err := snykTool.GetOrgs()
@@ -169,8 +142,8 @@ func main() {
 	        log.Fatal(err)
         }
         for _, org := range result.Orgs {
-            if ! *quietFlag {
-                fmt.Printf("========= %s =======\n", org.Name)
+            if ! snykTool.IsQuiet() {
+                fmt.Printf("<<< %s >>>\n", org.Name)
             }
             result_prj, err := snykTool.GetProjects(org.Id)
             if err != nil {
@@ -178,13 +151,10 @@ func main() {
             }
             for _, prj := range result_prj.Projects {
                 result_ignores := snykTool.GetProjectIgnores(org.Id, prj.Id)
-                for i := 0; i < len(result_ignores); i++ {
-                    if *quietFlag {
-                        fmt.Printf("%s\n", result_ignores[i].Id)
-                    } else {
-                        fmt.Printf("%s\t%s\t%s\t%s\n", org.Name, prj.Name, result_ignores[i].Id, result_ignores[i].Content.Created)
-                    }
+                if !snykTool.IsQuiet() {
+                    fmt.Printf("====> %s\n", prj.Name)
                 }
+                snykTool.FormatProjectIgnore(result_ignores)
             }
             // sleep for rate limit
             time.Sleep(1 * time.Second)
