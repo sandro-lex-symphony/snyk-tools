@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
     "snykTool"
+    "sort"
     "time"
 )
 
@@ -166,8 +167,45 @@ func main() {
             log.Fatal(err)
         }
         for _, issue := range(result.Issues) {
-            fmt.Printf("%s\t%s\t%s\n", issue.Id, issue.PkgName, issue.IssueData.Severity)
+            if *quietFlag {
+                fmt.Printf("%s\n", issue.Id)
+            } else {
+                fmt.Printf("%s\t%s\t%s\n", issue.Id, issue.PkgName, issue.IssueData.Severity)
+            }
         }
+    case "compare-project-issues":
+        result1, err := snykTool.GetProjectIssues(flag.Arg(1), flag.Arg(2))
+        if err != nil {
+            log.Fatal(err)
+        }
+        result2, err := snykTool.GetProjectIssues(flag.Arg(3), flag.Arg(4))
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        var res1, res2 []string
+        for _, issue := range(result1.Issues) {
+            res1 = append(res1, issue.Id)
+        }
+        sort.Sort(sort.Reverse(sort.StringSlice(res1)))
+        for _, issue := range(result2.Issues) {
+            res2 = append(res2, issue.Id)
+        }
+        sort.Sort(sort.Reverse(sort.StringSlice(res2)))
+
+        s3 := merge(res1, res2)
+        for i := 0; i < len(s3); i++ {
+            if contains(res1, s3[i]) && contains(res2, s3[i]) {
+                fmt.Printf("%s\t\t\t\t%s\n", s3[i], s3[i])
+            } else if contains(res1, s3[i]) {
+                fmt.Printf("%s\t\t\t\t\t------MISSING------\n", s3[i])
+            } else if contains(res2, s3[i]) {
+                fmt.Printf("------MISSING------\t\t\t\t\t%s\n", s3[i])
+            } else {
+                fmt.Printf("===== ERROR ====\n")
+            }
+        }
+
     case "report-org-issues":
         // get all prjs for the  org
         // for each prj get all the issues
@@ -202,4 +240,28 @@ func main() {
         fmt.Println("L: ", l)
 
 	}
+}
+
+
+func contains(s []string, x string) bool {
+    for _, v := range(s) {
+        if v == x {
+            return true
+        }
+    }
+    return false
+
+}
+
+func merge(s1 []string, s2[]string) []string {
+    var s3 []string
+    s3 = s1
+    for i:= 0; i < len(s2); i++ {
+        if !contains(s1, s2[i]) {
+            s3 = append(s3, s2[i])
+        }
+    }
+    sort.Sort(sort.Reverse(sort.StringSlice(s3)))
+    return s3
+    
 }
