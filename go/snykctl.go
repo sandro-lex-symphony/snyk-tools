@@ -16,6 +16,7 @@ func usage() {
 		"\tconfigure\n" +
 		"\ttoken\n" +
 		"\tlist-users [org] [prj]\n" +
+		"\tadd-user [org] [prj]\n" +
 		"\tlist-group-users\n" +
 		"\tcompare-users [org] [org]\n" +
 		"\tcopy-users [org] [org]\n" +
@@ -104,9 +105,14 @@ func main() {
 		}
 		s2 := snykTool.GetOrgName(os.Args[3])
 		snykTool.FormatUsers2Cols(r1, r2, s1, s2)
+
 	case "copy-users":
 		snykTool.CopyUsers(os.Args[2], os.Args[3])
 		fmt.Println("OK")
+
+    case "add-user":
+        snykTool.AddUser(os.Args[2], os.Args[3], "collaborator")
+        fmt.Println("OK")
 
 	case "list-orgs":
 		result, err := snykTool.GetOrgs()
