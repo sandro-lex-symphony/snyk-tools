@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -224,6 +225,23 @@ func GetProjects(org_id string) (*ProjectsResult, error) {
 
 	resp.Body.Close()
 	return &result, nil
+}
+
+func GetProject(org_id, prj_id string) error {
+    path := fmt.Sprintf("/org/%s/project/%s", org_id, prj_id)
+    resp := RequestGet(path)
+
+    if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return fmt.Errorf("GetProjects failed %s", resp.Status)
+	}
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Println(string(bytes))
+	return nil
 }
 
 func CreateOrg(org_name string) (*CreateOrgResult, error) {

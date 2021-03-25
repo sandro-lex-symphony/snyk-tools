@@ -25,6 +25,7 @@ func usage() {
 		"\tcreate-org [name]\n" +
 		"\tlist-projects [org]\n" +
 		"\tsearch-projects [org]\n" +
+		"\tproject [org] [prj]\n" +
 		"\tlist-project-issues [org] [prj]\n" +
 		"\treport-org-issues [org]\n" +
 		"\tlist-group-ignores\n" +
@@ -134,6 +135,9 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("%s\n", result.Id)
+
+    case "project":
+        snykTool.GetProject(flag.Arg(1), flag.Arg(2))
 
 	case "list-projects":
 		result, err := snykTool.GetProjects(flag.Arg(1))
