@@ -30,7 +30,9 @@ func usage() {
 		"\treport-org-issues [org]\n" +
 		"\tlist-group-ignores\n" +
 		"\tlist-org-ignores [org]\n" +
-		"\tlist-project-ignores [org] [prj]\n")
+		"\tlist-project-ignores [org] [prj]\n" +
+		"\tissue-count [org]" +
+		"\tissue-count [org] [prj]")
 }
 
 func main() {
@@ -111,9 +113,9 @@ func main() {
 		snykTool.CopyUsers(os.Args[2], os.Args[3])
 		fmt.Println("OK")
 
-    case "add-user":
-        snykTool.AddUser(os.Args[2], os.Args[3], "collaborator")
-        fmt.Println("OK")
+	case "add-user":
+		snykTool.AddUser(os.Args[2], os.Args[3], "collaborator")
+		fmt.Println("OK")
 
 	case "list-orgs":
 		result, err := snykTool.GetOrgs()
@@ -136,8 +138,8 @@ func main() {
 		}
 		fmt.Printf("%s\n", result.Id)
 
-    case "project":
-        snykTool.GetProject(flag.Arg(1), flag.Arg(2))
+	case "project":
+		snykTool.GetProject(flag.Arg(1), flag.Arg(2))
 
 	case "list-projects":
 		result, err := snykTool.GetProjects(flag.Arg(1))
@@ -239,6 +241,10 @@ func main() {
 				fmt.Printf("===== ERROR ====\n")
 			}
 		}
+
+	case "issue-count":
+		result := snykTool.IssuesCount(flag.Arg(1), flag.Arg(2))
+		snykTool.FormatIssuesResult(result, flag.Arg(1), flag.Arg(2))
 
 	case "report-org-issues":
 		// get all prjs for the  org

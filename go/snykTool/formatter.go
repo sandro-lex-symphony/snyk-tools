@@ -36,6 +36,16 @@ func FormatUser(result []*User) {
 	}
 }
 
+func FormatIssuesResult(r IssuesResults, org_id, prj_id string) {
+	for _, result := range *r.Results {
+		fmt.Printf("Org: %s\n", GetOrgName(org_id))
+		if prj_id != "" {
+			fmt.Printf("Prj: %s\n", prj_id)
+		}
+		fmt.Printf("Total: %d\nHigh: %d\nMedium: %d\nLow: %d\n", result.Count, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+	}
+}
+
 func FormatUsers2Cols(r1, r2 []*User, s1, s2 string) {
 	colsize := 40
 	//mid := addSpaces(1, "<=>")

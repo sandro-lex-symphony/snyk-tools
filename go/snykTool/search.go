@@ -228,10 +228,10 @@ func GetProjects(org_id string) (*ProjectsResult, error) {
 }
 
 func GetProject(org_id, prj_id string) error {
-    path := fmt.Sprintf("/org/%s/project/%s", org_id, prj_id)
-    resp := RequestGet(path)
+	path := fmt.Sprintf("/org/%s/project/%s", org_id, prj_id)
+	resp := RequestGet(path)
 
-    if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
 		return fmt.Errorf("GetProjects failed %s", resp.Status)
 	}
@@ -324,4 +324,26 @@ func SearchOrgs(term string) (*OrgList, error) {
 		}
 	}
 	return &filtered, nil
+}
+
+func IssuesCount(org_id, prj_id string) IssuesResults {
+	path := "/reporting/counts/issues/latest?groupBy=severity"
+	var str string
+	if prj_id == "" {
+		str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"]}}", org_id)
+	} else {
+		str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"], \"projects\": [\"%s\"]}}", org_id, prj_id)
+	}
+	var jsonStr = []byte(str)
+	resp := RequestPost(path, jsonStr)
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		log.Fatal("Issue count failed ", resp.Status)
+	}
+	var result IssuesResults
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		resp.Body.Close()
+		log.Fatal(err)
+	}
+	return result
 }
