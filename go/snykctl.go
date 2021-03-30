@@ -31,8 +31,8 @@ func usage() {
 		"\tlist-group-ignores\n" +
 		"\tlist-org-ignores [org]\n" +
 		"\tlist-project-ignores [org] [prj]\n" +
-		"\tissue-count [org]" +
-		"\tissue-count [org] [prj]")
+		"\tissue-count [org]\n" +
+		"\tissue-count [org] [prj]\n")
 }
 
 func main() {
