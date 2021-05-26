@@ -276,6 +276,21 @@ func CreateOrg(org_name string) (*CreateOrgResult, error) {
 
 }
 
+func GetOrgConfig(org_id string) {
+	path := fmt.Sprintf("/org/%s/settings", org_id)
+	resp := RequestGet(path)
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		fmt.Printf("GetProjects failed %s", resp.Status)
+	}
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Println(string(bytes))
+
+}
 func GetOrgs() (*OrgList, error) {
 	if OrgsCache != nil {
 		return OrgsCache, nil

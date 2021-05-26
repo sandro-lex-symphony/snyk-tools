@@ -32,7 +32,8 @@ func usage() {
 		"\tlist-org-ignores [org]\n" +
 		"\tlist-project-ignores [org] [prj]\n" +
 		"\tissue-count [org]\n" +
-		"\tissue-count [org] [prj]\n")
+		"\tissue-count [org] [prj]\n" +
+		"\tget-org-config [org]\n")
 }
 
 func main() {
@@ -117,6 +118,8 @@ func main() {
 		snykTool.AddUser(os.Args[2], os.Args[3], "collaborator")
 		fmt.Println("OK")
 
+	case "get-org-config":
+		snykTool.GetOrgConfig(flag.Arg(1))
 	case "list-orgs":
 		result, err := snykTool.GetOrgs()
 		if err != nil {
