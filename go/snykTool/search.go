@@ -34,16 +34,16 @@ func IsDebug() bool {
 	return Debug
 }
 
-func RequestGet(path string) *http.Response {
+func Request(path string, verb string) *http.Response {
 	timeout := time.Duration(time.Duration(GetTimeout()) * time.Second)
 	client := http.Client{
 		Timeout: timeout,
 	}
 	req := SnykURL + path
 	if IsDebug() {
-		fmt.Println("GET", req)
+		fmt.Println(verb, req)
 	}
-	request, err := http.NewRequest("GET", req, nil)
+	request, err := http.NewRequest(verb, req, nil)
 	request.Header.Set("Authorization", "token "+GetToken())
 	if err != nil {
 		log.Fatal(err)
@@ -54,6 +54,14 @@ func RequestGet(path string) *http.Response {
 		log.Fatal(err)
 	}
 	return resp
+}
+
+func RequestGet(path string) *http.Response {
+	return Request(path, "GET")
+}
+
+func RequestDelete(path string) *http.Response {
+	return Request(path, "DELETE")
 }
 
 func RequestPost(path string, data []byte) *http.Response {
@@ -157,6 +165,16 @@ func SearchProjects(org_id string, term string) (*ProjectsResult, error) {
 	}
 
 	return &filtered, nil
+}
+
+func DeleteProject(org_id string, prj_id string) bool {
+	path := fmt.Sprintf("/org/%s/project/%s", org_id, prj_id)
+	resp := RequestDelete(path)
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		log.Fatal("Get Ignores failed ", resp.Status)
+	}
+	return true
 }
 
 func GetProjectIgnores(org_id string, prj_id string) []IgnoreResult {

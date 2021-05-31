@@ -25,6 +25,8 @@ func usage() {
 		"\tcreate-org [name]\n" +
 		"\tlist-projects [org]\n" +
 		"\tsearch-projects [org]\n" +
+		"\tdelete-project [org] [prj]\n" +
+		"\tdelete-all-projects [org]\n" +
 		"\tproject [org] [prj]\n" +
 		"\tlist-project-issues [org] [prj]\n" +
 		"\treport-org-issues [org]\n" +
@@ -45,6 +47,7 @@ func main() {
 	nameOnlyFlag := flag.Bool("n", false, "Names only output")
 	debugFlag := flag.Bool("d", false, "Debug http requests")
 	timeoutFlag := flag.Int("t", 10, "Http timeout")
+	// TODO: Add ansync request option flag
 	flag.Parse()
 	if *debugFlag {
 		snykTool.SetDebug(true)
@@ -158,6 +161,21 @@ func main() {
 		}
 		snykTool.FormatProjects(result)
 
+	case "delete-project":
+		if snykTool.DeleteProject(flag.Arg(1), flag.Arg(2)) {
+			fmt.Println("OK")
+		}
+
+	case "delete-all-projects":
+		prjs, err := snykTool.GetProjects(flag.Arg(1))
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, prj := range prjs.Projects {
+			if snykTool.DeleteProject(flag.Arg(1), prj.Id) {
+				fmt.Printf("%s DELETED\n", prj.Id)
+			}
+		}
 	case "list-project-ignores":
 		res := snykTool.GetProjectIgnores(flag.Arg(1), flag.Arg(2))
 		snykTool.FormatProjectIgnore(res)
