@@ -275,6 +275,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		var c int
 		var h int
 		var m int
 		var l int
@@ -286,7 +287,9 @@ func main() {
 				log.Fatal(err)
 			}
 			for _, issue := range res.Issues {
-				if "high" == issue.IssueData.Severity {
+				if "critical" == issue.IssueData.Severity {
+					c += 1
+				} else if "high" == issue.IssueData.Severity {
 					h += 1
 				} else if "medium" == issue.IssueData.Severity {
 					m += 1
@@ -296,6 +299,7 @@ func main() {
 			}
 		}
 		fmt.Println("P:", prjs)
+		fmt.Println("C: ", c)
 		fmt.Println("H: ", h)
 		fmt.Println("M: ", m)
 		fmt.Println("L: ", l)
