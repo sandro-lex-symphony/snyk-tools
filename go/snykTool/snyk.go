@@ -88,7 +88,8 @@ type IssuesResult struct {
 }
 
 type Severity struct {
-	High   int
-	Medium int
-	Low    int
+	Critical int
+	High     int
+	Medium   int
+	Low      int
 }

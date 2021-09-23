@@ -47,10 +47,15 @@ func main() {
 	nameOnlyFlag := flag.Bool("n", false, "Names only output")
 	debugFlag := flag.Bool("d", false, "Debug http requests")
 	timeoutFlag := flag.Int("t", 10, "Http timeout")
+	htmlFlag := flag.Bool("html", false, "Html table")
 	// TODO: Add ansync request option flag
 	flag.Parse()
 	if *debugFlag {
 		snykTool.SetDebug(true)
+	}
+
+	if *htmlFlag {
+		snykTool.SetHtmlFormat(true)
 	}
 
 	if *quietFlag {
@@ -264,8 +269,11 @@ func main() {
 		}
 
 	case "issue-count":
-		result := snykTool.IssuesCount(flag.Arg(1), flag.Arg(2))
-		snykTool.FormatIssuesResult(result, flag.Arg(1), flag.Arg(2))
+		if flag.Arg(2) == "" {
+			org_issue_count(flag.Arg(1))
+		} else {
+			prj_issue_count(flag.Arg(1), flag.Arg(2))
+		}
 
 	case "report-org-issues":
 		// get all prjs for the  org
@@ -304,6 +312,49 @@ func main() {
 		fmt.Println("M: ", m)
 		fmt.Println("L: ", l)
 
+	}
+}
+
+func org_issue_count(org_id string) {
+	result, err := snykTool.GetProjects(org_id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var c int
+	var h int
+	var m int
+	var l int
+	var prjs int
+
+	htmlTable := "<table border=1><tr><thead><th>Project</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th></tr></thead><tbody>"
+
+	for _, project := range result.Projects {
+		prjs += 1
+		r := snykTool.IssuesCount(org_id, project.Id)
+		htmlTable += snykTool.FormatPrjIssuesCountHtml(r, org_id, project.Id)
+		for _, result := range *r.Results {
+			c += result.Severity.Critical
+			h += result.Severity.High
+			m += result.Severity.Medium
+			l += result.Severity.Low
+		}
+
+	}
+
+	htmlTable += fmt.Sprintf("<tr><th align=left>TOTAL</th><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
+	htmlTable += "</tbody></table>"
+
+	fmt.Print(htmlTable)
+
+}
+
+func prj_issue_count(org_id, prj_id string) {
+	result := snykTool.IssuesCount(org_id, prj_id)
+	if snykTool.IsHtmlFormat() {
+		fmt.Printf("%s", snykTool.FormatPrjIssuesCountHtml(result, flag.Arg(1), flag.Arg(2)))
+	} else {
+		fmt.Printf("%s", snykTool.FormatIssuesResult(result, flag.Arg(1), flag.Arg(2)))
 	}
 }
 

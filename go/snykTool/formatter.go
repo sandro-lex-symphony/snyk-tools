@@ -7,6 +7,7 @@ import (
 
 var Quiet bool
 var NameOnly bool
+var HtmlFormat bool
 
 func SetQuiet(b bool) {
 	Quiet = b
@@ -14,6 +15,14 @@ func SetQuiet(b bool) {
 
 func IsQuiet() bool {
 	return Quiet
+}
+
+func SetHtmlFormat(b bool) {
+	HtmlFormat = b
+}
+
+func IsHtmlFormat() bool {
+	return HtmlFormat
 }
 
 func SetNameOnly(b bool) {
@@ -36,14 +45,28 @@ func FormatUser(result []*User) {
 	}
 }
 
-func FormatIssuesResult(r IssuesResults, org_id, prj_id string) {
+func FormatIssuesResult(r IssuesResults, org_id, prj_id string) string {
+	var out string
 	for _, result := range *r.Results {
-		fmt.Printf("Org: %s\n", GetOrgName(org_id))
+		out = fmt.Sprintf("Org: %s\n", GetOrgName(org_id))
 		if prj_id != "" {
-			fmt.Printf("Prj: %s\n", prj_id)
+			out += fmt.Sprintf("Prj: %s\n", prj_id)
 		}
-		fmt.Printf("Total: %d\nHigh: %d\nMedium: %d\nLow: %d\n", result.Count, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+		out += fmt.Sprintf("Total: %d\nCritical: %d\nHigh: %d\nMedium: %d\nLow: %d\n", result.Count, result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
 	}
+
+	return out
+}
+
+func FormatPrjIssuesCountHtml(r IssuesResults, org_id, prj_id string) string {
+	var line string
+
+	for _, result := range *r.Results {
+		line = fmt.Sprintf("<tr><th align=left>%s</th><td>%d</td><td>%d</td><td>%d</td><td>%d</td><tr>",
+			GetPrjName(org_id, prj_id), result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+	}
+
+	return line
 }
 
 func FormatUsers2Cols(r1, r2 []*User, s1, s2 string) {

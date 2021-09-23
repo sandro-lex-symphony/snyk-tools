@@ -345,6 +345,25 @@ func GetOrgName(id string) string {
 	return ""
 }
 
+func GetPrjName(org_id, prj_id string) string {
+	path := fmt.Sprintf("/org/%s/project/%s", org_id, prj_id)
+	resp := RequestGet(path)
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return "ERROR"
+	}
+
+	var result Project
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		resp.Body.Close()
+		return "ERROR"
+	}
+	resp.Body.Close()
+
+	return result.Name
+}
+
 func SearchOrgs(term string) (*OrgList, error) {
 	result, err := GetOrgs()
 	if err != nil {
@@ -363,9 +382,9 @@ func IssuesCount(org_id, prj_id string) IssuesResults {
 	path := "/reporting/counts/issues/latest?groupBy=severity"
 	var str string
 	if prj_id == "" {
-		str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"]}}", org_id)
+		str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"], \"severity\": [\"critical\",\"high\",\"medium\",\"low\"]}}", org_id)
 	} else {
-		str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"], \"projects\": [\"%s\"]}}", org_id, prj_id)
+		str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"], \"projects\": [\"%s\"], \"severity\": [\"critical\",\"high\",\"medium\",\"low\"]}}", org_id, prj_id)
 	}
 	var jsonStr = []byte(str)
 	resp := RequestPost(path, jsonStr)
@@ -374,6 +393,7 @@ func IssuesCount(org_id, prj_id string) IssuesResults {
 		log.Fatal("Issue count failed ", resp.Status)
 	}
 	var result IssuesResults
+
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		resp.Body.Close()
 		log.Fatal(err)
