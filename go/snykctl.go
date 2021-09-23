@@ -327,7 +327,7 @@ func org_issue_count(org_id string) {
 	var l int
 	var prjs int
 
-	htmlTable := "<table border=1><tr><thead><th>Project</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th></tr></thead><tbody>"
+	htmlTable := fmt.Sprintf("<table border=1><thead><tr><th colspan=\"5\" align=\"center\">%s</th></tr><tr><th>Project</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th></tr></thead><tbody>", snykTool.GetOrgName(org_id))
 
 	for _, project := range result.Projects {
 		prjs += 1
