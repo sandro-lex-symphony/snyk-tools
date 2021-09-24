@@ -326,13 +326,18 @@ func org_issue_count(org_id string) {
 	var m int
 	var l int
 	var prjs int
+	var htmlTableHeader string
+	var htmlTableBody string
+	var htmlTableFooter string
+	var htmlTableTotal string
+	var output string
 
-	htmlTable := "<table><tr><td>Project</td><td>Critical</td><td>High</td><td>Medium</td><td>Low</td></tr>"
+	htmlTableHeader = "<table><tr><td>Project</td><td>Critical</td><td>High</td><td>Medium</td><td>Low</td></tr>"
 
 	for _, project := range result.Projects {
 		prjs += 1
 		r := snykTool.IssuesCount(org_id, project.Id)
-		htmlTable += snykTool.FormatPrjIssuesCountHtml(r, org_id, project.Id)
+		htmlTableBody += snykTool.FormatPrjIssuesCountHtml(r, org_id, project.Id)
 		for _, result := range *r.Results {
 			c += result.Severity.Critical
 			h += result.Severity.High
@@ -342,10 +347,12 @@ func org_issue_count(org_id string) {
 
 	}
 
-	htmlTable += fmt.Sprintf("<tr><td>TOTAL</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
-	htmlTable += "</table>"
+	htmlTableTotal = fmt.Sprintf("<tr><td>TOTAL</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
+	htmlTableFooter = "</table>"
 
-	fmt.Print(htmlTable)
+	output = htmlTableHeader + htmlTableTotal + htmlTableBody + htmlTableFooter
+
+	fmt.Print(output)
 
 }
 
