@@ -62,7 +62,7 @@ func FormatPrjIssuesCountHtml(r IssuesResults, org_id, prj_id string) string {
 	var line string
 
 	for _, result := range *r.Results {
-		line = fmt.Sprintf("<tr><th align=left>%s</th><td>%d</td><td>%d</td><td>%d</td><td>%d</td><tr>",
+		line = fmt.Sprintf("<tr><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><tr>",
 			GetPrjName(org_id, prj_id), result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
 	}
 

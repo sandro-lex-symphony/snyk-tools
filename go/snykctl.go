@@ -327,7 +327,7 @@ func org_issue_count(org_id string) {
 	var l int
 	var prjs int
 
-	htmlTable := "<table border=1><tr><th>Project</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th></tr>"
+	htmlTable := "<table><tr><td>Project</td><td>Critical</td><td>High</td><td>Medium</td><td>Low</td></tr>"
 
 	for _, project := range result.Projects {
 		prjs += 1
@@ -342,7 +342,7 @@ func org_issue_count(org_id string) {
 
 	}
 
-	htmlTable += fmt.Sprintf("<tr><th align=left>TOTAL</th><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
+	htmlTable += fmt.Sprintf("<tr><td>TOTAL</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
 	htmlTable += "</table>"
 
 	fmt.Print(htmlTable)
