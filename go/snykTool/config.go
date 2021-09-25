@@ -15,7 +15,7 @@ func GetToken() string {
     if err != nil {
         log.Fatal(err)
     }
-    token, _ := conf["group_token"]
+    token, _ := conf["token"]
     return token
 }
 
@@ -24,14 +24,14 @@ func GetGroupId() string{
     if err != nil {
         log.Fatal(err)
     }
-    token, _ := conf["group_id"]
-    return token
+    id, _ := conf["id"]
+    return id
 }
 
 func WriteConf(token string, group_id string) {
 	home, err := os.UserHomeDir()
     filename := home + "/.snykctl.conf"
-    d1 := []byte("[DEFAULT]\ngroup_token = " + token + "\ngroup_id = " + group_id)
+    d1 := []byte("[DEFAULT]\ntoken = " + token + "\nid = " + group_id)
     err =  ioutil.WriteFile(filename, d1, 0644)
     if err != nil {
         panic(err)
