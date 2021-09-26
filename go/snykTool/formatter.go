@@ -58,6 +58,76 @@ func FormatIssuesResult(r IssuesResults, org_id, prj_id string) string {
 	return out
 }
 
+func FormatIssues(issuesList []AggregateIssuesResult) string {
+	if HtmlFormat {
+		return FormatIssuesHtml(issuesList)
+	}
+
+	return FormatIssuesCli(issuesList)
+}
+
+func FormatIssuesHtml(issuesList []AggregateIssuesResult) string {
+	var out string
+	var t, c, h, m, l int = 0, 0, 0, 0, 0
+
+	// header
+	out += FormatIssuesResultHeaderHtml()
+	// each item
+	for _, v := range issuesList {
+		for _, result := range *v.IssuesResults.Results {
+			t += 1 // useless, could've got the length
+			c += result.Severity.Critical
+			h += result.Severity.High
+			m += result.Severity.Medium
+			l += result.Severity.Low
+			out += fmt.Sprintf("<tr><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>",
+				GetPrjName(v.Org, v.Prj), result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+		}
+	}
+	// TODO: count
+	out += fmt.Sprintf("<tr><td>TOTAL</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
+
+	// footer
+	out += "</table>"
+	return out
+}
+
+func FormatIssuesCli(issuesList []AggregateIssuesResult) string {
+	var out string
+	var t, c, h, m, l int = 0, 0, 0, 0, 0
+	// header
+	out += FormatIssuesResultHeaderCli()
+	// each item
+	for _, v := range issuesList {
+		for _, result := range *v.IssuesResults.Results {
+			t += 1 // useless, could've got the length
+			c += result.Severity.Critical
+			h += result.Severity.High
+			m += result.Severity.Medium
+			l += result.Severity.Low
+			out = fmt.Sprintf("%s\t\t\t\t%d\t%d\t%d\t%d\n", GetPrjName(v.Org, v.Prj), result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+		}
+	}
+
+	// footer
+	return out
+}
+
+func FormatIssuesResultHeaderCli() string {
+	return "PROJECT\t\t\t\tCRITICAL\tHIGH\tMEDIUM\tLOW\n"
+}
+
+func FormatIssuesResultCli(r IssuesResults, org_id, prj_id string) string {
+	var out string
+	for _, result := range *r.Results {
+		out = fmt.Sprintf("%s\t\t\t\t%d\t%d\t%d\t%d\n", GetPrjName(org_id, prj_id), result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+	}
+	return out
+}
+
+func FormatIssuesResultHeaderHtml() string {
+	return "<table><tr><td>PROJECT</td><td>Critical</td><td>High</td><td>Medium</td><td>Low</td></tr>"
+}
 func FormatPrjIssuesCountHtml(r IssuesResults, org_id, prj_id string) string {
 	var line string
 

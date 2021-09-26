@@ -14,6 +14,7 @@ import (
 var Debug bool
 var Timeout int
 var OrgsCache *OrgList
+var FilterLifecycle string
 
 func SetTimeout(t int) {
 	Timeout = t
@@ -32,6 +33,17 @@ func SetDebug(d bool) {
 
 func IsDebug() bool {
 	return Debug
+}
+
+func SetFilterLifecycle(lf string) {
+	if lf == "dev" {
+		lf = "development"
+	}
+	if lf == "prod" {
+		lf = "production"
+	}
+
+	FilterLifecycle = lf
 }
 
 func Request(path string, verb string) *http.Response {
@@ -226,7 +238,39 @@ func GetProjectIssues(org_id string, prj_id string) (*ProjectIssuesResult, error
 	return &result, nil
 }
 
+// same as get project, but apply filters
+func GetFilteredProjects(org_id string) (*ProjectsResult, error) {
+	path := fmt.Sprintf("/org/%s/projects", org_id)
+
+	var filter string
+	if FilterLifecycle != "" {
+		filter = fmt.Sprintf("{\"filters\": { \"attributes\": { \"lifecycle\": [ \"%s\" ] } } }", FilterLifecycle)
+	}
+
+	var jsonStr = []byte(filter)
+	resp := RequestPost(path, jsonStr)
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		log.Fatal("Get filtered projects list failed ", resp.Status)
+	}
+	var result ProjectsResult
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		resp.Body.Close()
+		log.Fatal(err)
+	}
+
+	resp.Body.Close()
+	return &result, nil
+}
+
 func GetProjects(org_id string) (*ProjectsResult, error) {
+	// check if any filter set
+	// TODO: generic filters
+	if FilterLifecycle != "" {
+		return GetFilteredProjects(org_id)
+	}
+
 	path := fmt.Sprintf("/org/%s/projects", org_id)
 	resp := RequestGet(path)
 
@@ -399,4 +443,32 @@ func IssuesCount(org_id, prj_id string) IssuesResults {
 		log.Fatal(err)
 	}
 	return result
+}
+
+// could have passed direct by IssueCount with only a org filter
+// but then it is not possible to apply other filters like attributes
+// so it is better to manually get the list of pojects, consider the filter
+// and then get the issue count for each project
+// todo: add asnyc parallel requests
+func OrgIssueCount(org_id string) []AggregateIssuesResult {
+	// this entry should consider filters
+	result, err := GetProjects(org_id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var prjs []AggregateIssuesResult
+
+	for _, project := range result.Projects {
+		prj := AggregateIssuesResult{
+			IssuesResults: IssuesCount(org_id, project.Id),
+			Org:           org_id,
+			Prj:           project.Id,
+		}
+
+		prjs = append(prjs, prj)
+	}
+
+	return prjs
+
 }

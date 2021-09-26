@@ -77,6 +77,12 @@ type IssueData struct {
 	CvssScore       float32
 }
 
+type AggregateIssuesResult struct {
+	IssuesResults IssuesResults
+	Org           string
+	Prj           string
+}
+
 type IssuesResults struct {
 	Results *[]IssuesResult
 }

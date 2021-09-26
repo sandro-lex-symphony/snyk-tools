@@ -23,7 +23,7 @@ func usage() {
 		"\tlist-orgs\n" +
 		"\tsearch-org [name]\n" +
 		"\tcreate-org [name]\n" +
-		"\tlist-projects [org]\n" +
+		"\tlist-projects [org]   [-lifecycle prod | dev | sandbox ] \n" +
 		"\tsearch-projects [org]\n" +
 		"\tdelete-project [org] [prj]\n" +
 		"\tdelete-all-projects [org]\n" +
@@ -48,6 +48,8 @@ func main() {
 	debugFlag := flag.Bool("d", false, "Debug http requests")
 	timeoutFlag := flag.Int("t", 10, "Http timeout")
 	htmlFlag := flag.Bool("html", false, "Html table")
+	lifecycle := flag.String("lifecycle", "", "prod | dev | sandbox")
+
 	// TODO: Add ansync request option flag
 	flag.Parse()
 	if *debugFlag {
@@ -68,6 +70,16 @@ func main() {
 
 	if *timeoutFlag != 10 {
 		snykTool.SetTimeout(*timeoutFlag)
+	}
+
+	if *lifecycle != "" {
+		validOptions := []string{"dev", "development", "prod", "production", "sandbox"}
+		if !contains(validOptions, *lifecycle) {
+			usage()
+			os.Exit(1)
+		}
+
+		snykTool.SetFilterLifecycle(*lifecycle)
 	}
 
 	switch flag.Arg(0) {
@@ -315,7 +327,7 @@ func main() {
 	}
 }
 
-func org_issue_count(org_id string) {
+func org_issue_count_orig(org_id string) {
 	result, err := snykTool.GetProjects(org_id)
 	if err != nil {
 		log.Fatal(err)
@@ -356,12 +368,21 @@ func org_issue_count(org_id string) {
 
 }
 
+func org_issue_count(org_id string) {
+	// get the list of issues per org
+	// print output according to format options
+	aggregatedIssues := snykTool.OrgIssueCount(org_id)
+	out := snykTool.FormatIssues(aggregatedIssues)
+	fmt.Print(out)
+}
+
 func prj_issue_count(org_id, prj_id string) {
 	result := snykTool.IssuesCount(org_id, prj_id)
 	if snykTool.IsHtmlFormat() {
 		fmt.Printf("%s", snykTool.FormatPrjIssuesCountHtml(result, flag.Arg(1), flag.Arg(2)))
 	} else {
-		fmt.Printf("%s", snykTool.FormatIssuesResult(result, flag.Arg(1), flag.Arg(2)))
+		fmt.Printf("%s", snykTool.FormatIssuesResultHeaderCli())
+		fmt.Printf("%s", snykTool.FormatIssuesResultCli(result, flag.Arg(1), flag.Arg(2)))
 	}
 }
 
