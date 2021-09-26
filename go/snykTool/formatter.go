@@ -105,7 +105,7 @@ func FormatIssuesCli(issuesList []AggregateIssuesResult) string {
 			h += result.Severity.High
 			m += result.Severity.Medium
 			l += result.Severity.Low
-			out = fmt.Sprintf("%s\t\t\t\t%d\t%d\t%d\t%d\n", GetPrjName(v.Org, v.Prj), result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+			out += fmt.Sprintf("%s\t\t\t\t%d\t%d\t%d\t%d\n", GetPrjName(v.Org, v.Prj), result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
 		}
 	}
 

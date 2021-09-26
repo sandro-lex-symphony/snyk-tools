@@ -15,6 +15,7 @@ var Debug bool
 var Timeout int
 var OrgsCache *OrgList
 var FilterLifecycle string
+var FilterEnvironment string
 
 func SetTimeout(t int) {
 	Timeout = t
@@ -44,6 +45,17 @@ func SetFilterLifecycle(lf string) {
 	}
 
 	FilterLifecycle = lf
+}
+
+func SetFilterEnvironment(env string) {
+	if env == "front" {
+		env = "frontend"
+	}
+	if env == "back" {
+		env = "backend"
+	}
+
+	FilterEnvironment = env
 }
 
 func Request(path string, verb string) *http.Response {
@@ -243,9 +255,21 @@ func GetFilteredProjects(org_id string) (*ProjectsResult, error) {
 	path := fmt.Sprintf("/org/%s/projects", org_id)
 
 	var filter string
+	filter = "{\"filters\": { \"attributes\": {"
+
 	if FilterLifecycle != "" {
-		filter = fmt.Sprintf("{\"filters\": { \"attributes\": { \"lifecycle\": [ \"%s\" ] } } }", FilterLifecycle)
+		// filter = fmt.Sprintf("{\"filters\": { \"attributes\": { \"lifecycle\": [ \"%s\" ] } } }", FilterLifecycle)
+		filter += fmt.Sprintf("\"lifecycle\": [ \"%s\" ]", FilterLifecycle)
 	}
+	if FilterLifecycle != "" && FilterEnvironment != "" {
+		filter += ","
+	}
+
+	if FilterEnvironment != "" {
+		filter += fmt.Sprintf("\"environment\": [ \"%s\" ]", FilterEnvironment)
+	}
+
+	filter += "} } }"
 
 	var jsonStr = []byte(filter)
 	resp := RequestPost(path, jsonStr)
@@ -267,7 +291,7 @@ func GetFilteredProjects(org_id string) (*ProjectsResult, error) {
 func GetProjects(org_id string) (*ProjectsResult, error) {
 	// check if any filter set
 	// TODO: generic filters
-	if FilterLifecycle != "" {
+	if FilterLifecycle != "" || FilterEnvironment != "" {
 		return GetFilteredProjects(org_id)
 	}
 

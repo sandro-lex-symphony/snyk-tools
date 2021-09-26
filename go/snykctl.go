@@ -23,7 +23,7 @@ func usage() {
 		"\tlist-orgs\n" +
 		"\tsearch-org [name]\n" +
 		"\tcreate-org [name]\n" +
-		"\tlist-projects [org]   [-lifecycle prod | dev | sandbox ] \n" +
+		"\tlist-projects [org]   [-lifecycle prod | dev | sandbox ] [-env front | back | mobile | onprem ]\n" +
 		"\tsearch-projects [org]\n" +
 		"\tdelete-project [org] [prj]\n" +
 		"\tdelete-all-projects [org]\n" +
@@ -34,7 +34,7 @@ func usage() {
 		"\tlist-org-ignores [org]\n" +
 		"\tlist-project-ignores [org] [prj]\n" +
 		"\tissue-count [org]\n" +
-		"\tissue-count [org] [prj]\n" +
+		"\tissue-count [org] [prj] [-lifecycle prod | dev | sandbox ] [-env front | back | mobile | onprem ]\n" +
 		"\tget-org-config [org]\n")
 }
 
@@ -48,7 +48,8 @@ func main() {
 	debugFlag := flag.Bool("d", false, "Debug http requests")
 	timeoutFlag := flag.Int("t", 10, "Http timeout")
 	htmlFlag := flag.Bool("html", false, "Html table")
-	lifecycle := flag.String("lifecycle", "", "prod | dev | sandbox")
+	lifecycleFlag := flag.String("lifecycle", "", "prod | dev | sandbox")
+	environmentFlag := flag.String("env", "", "front | back | onprem | mobile")
 
 	// TODO: Add ansync request option flag
 	flag.Parse()
@@ -72,14 +73,26 @@ func main() {
 		snykTool.SetTimeout(*timeoutFlag)
 	}
 
-	if *lifecycle != "" {
+	if *lifecycleFlag != "" {
 		validOptions := []string{"dev", "development", "prod", "production", "sandbox"}
-		if !contains(validOptions, *lifecycle) {
+		if !contains(validOptions, *lifecycleFlag) {
+			fmt.Printf("ERROR: invalid lifecycle value\n")
 			usage()
 			os.Exit(1)
 		}
 
-		snykTool.SetFilterLifecycle(*lifecycle)
+		snykTool.SetFilterLifecycle(*lifecycleFlag)
+	}
+
+	if *environmentFlag != "" {
+		validOptions := []string{"front", "frontend", "back", "backend", "onprem", "mobile"}
+		if !contains(validOptions, *environmentFlag) {
+			fmt.Printf("ERROR: Invalid env value\n")
+			usage()
+			os.Exit(1)
+		}
+
+		snykTool.SetFilterEnvironment(*environmentFlag)
 	}
 
 	switch flag.Arg(0) {
@@ -325,47 +338,6 @@ func main() {
 		fmt.Println("L: ", l)
 
 	}
-}
-
-func org_issue_count_orig(org_id string) {
-	result, err := snykTool.GetProjects(org_id)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var c int
-	var h int
-	var m int
-	var l int
-	var prjs int
-	var htmlTableHeader string
-	var htmlTableBody string
-	var htmlTableFooter string
-	var htmlTableTotal string
-	var output string
-
-	htmlTableHeader = fmt.Sprintf("<table><tr><td>%s</td><td>Critical</td><td>High</td><td>Medium</td><td>Low</td></tr>", snykTool.GetOrgName(org_id))
-
-	for _, project := range result.Projects {
-		prjs += 1
-		r := snykTool.IssuesCount(org_id, project.Id)
-		htmlTableBody += snykTool.FormatPrjIssuesCountHtml(r, org_id, project.Id)
-		for _, result := range *r.Results {
-			c += result.Severity.Critical
-			h += result.Severity.High
-			m += result.Severity.Medium
-			l += result.Severity.Low
-		}
-
-	}
-
-	htmlTableTotal = fmt.Sprintf("<tr><td>TOTAL</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
-	htmlTableFooter = "</table>"
-
-	output = htmlTableHeader + htmlTableTotal + htmlTableBody + htmlTableFooter
-
-	fmt.Print(output)
-
 }
 
 func org_issue_count(org_id string) {
