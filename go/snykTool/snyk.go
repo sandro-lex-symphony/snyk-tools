@@ -88,6 +88,8 @@ type IssuesResults struct {
 }
 
 type IssuesResult struct {
+	Org      string
+	Prj      string
 	Day      string
 	Count    int
 	Severity Severity

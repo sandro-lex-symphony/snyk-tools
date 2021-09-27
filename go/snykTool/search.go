@@ -13,6 +13,7 @@ import (
 
 var Debug bool
 var Timeout int
+var ParallelHttpRequests bool
 var OrgsCache *OrgList
 var FilterLifecycle string
 var FilterEnvironment string
@@ -36,6 +37,10 @@ func IsDebug() bool {
 	return Debug
 }
 
+func SetParallelHttpRequests(b bool) {
+	ParallelHttpRequests = b
+}
+
 func SetFilterLifecycle(lf string) {
 	if lf == "dev" {
 		lf = "development"
@@ -56,6 +61,36 @@ func SetFilterEnvironment(env string) {
 	}
 
 	FilterEnvironment = env
+}
+
+func MakeGetRequest(path string, ch chan<- *http.Response) {
+
+	// start := time.Now()
+	timeout := time.Duration(time.Duration(GetTimeout()) * time.Second)
+
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	req := SnykURL + path
+	if IsDebug() {
+		fmt.Println("GET", req)
+	}
+
+	request, err := http.NewRequest("GET", req, nil)
+	request.Header.Set("Authorization", "token "+GetToken())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// secs := time.Since(start).Seconds()
+
+	ch <- resp
 }
 
 func Request(path string, verb string) *http.Response {
@@ -446,6 +481,27 @@ func SearchOrgs(term string) (*OrgList, error) {
 	return &filtered, nil
 }
 
+func MakeIssuesCount(org_id, prj_id string, ch chan<- IssuesResults) {
+	path := "/reporting/counts/issues/latest?groupBy=severity"
+	var str string
+
+	str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"], \"projects\": [\"%s\"], \"severity\": [\"critical\",\"high\",\"medium\",\"low\"]}}", org_id, prj_id)
+	var jsonStr = []byte(str)
+	resp := RequestPost(path, jsonStr)
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		log.Fatal("Issue count failed ", resp.Status)
+	}
+	var result IssuesResults
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		resp.Body.Close()
+		log.Fatal(err)
+	}
+
+	ch <- result
+}
+
 func IssuesCount(org_id, prj_id string) IssuesResults {
 	path := "/reporting/counts/issues/latest?groupBy=severity"
 	var str string
@@ -483,14 +539,32 @@ func OrgIssueCount(org_id string) []AggregateIssuesResult {
 
 	var prjs []AggregateIssuesResult
 
-	for _, project := range result.Projects {
-		prj := AggregateIssuesResult{
-			IssuesResults: IssuesCount(org_id, project.Id),
-			Org:           org_id,
-			Prj:           project.Id,
+	if ParallelHttpRequests {
+		ch := make(chan IssuesResults)
+		for _, project := range result.Projects {
+			go MakeIssuesCount(org_id, project.Id, ch)
 		}
 
-		prjs = append(prjs, prj)
+		for _, project := range result.Projects {
+			prj := AggregateIssuesResult{
+				IssuesResults: <-ch,
+				Org:           org_id,
+				Prj:           project.Name,
+			}
+			prjs = append(prjs, prj)
+		}
+
+	} else {
+
+		for _, project := range result.Projects {
+			prj := AggregateIssuesResult{
+				IssuesResults: IssuesCount(org_id, project.Id),
+				Org:           org_id,
+				Prj:           project.Name,
+			}
+
+			prjs = append(prjs, prj)
+		}
 	}
 
 	return prjs
