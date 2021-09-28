@@ -10,6 +10,7 @@ import (
 )
 
 const defaultTimeout = 10
+const defaultWorkerSize = 10
 
 type ConfigProperties map[string]string
 
@@ -43,6 +44,20 @@ func GetTimeoutFromConf() int {
 	}
 
 	return defaultTimeout
+}
+
+func GetWorkerSizeFromConf() int {
+	conf, err := ReadConf()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	t, _ := strconv.Atoi(conf["worker_size"])
+	if t > 0 {
+		return t
+	}
+
+	return defaultWorkerSize
 }
 
 func WriteConf(token string, group_id string) {

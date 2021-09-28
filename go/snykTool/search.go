@@ -17,6 +17,18 @@ var ParallelHttpRequests bool
 var OrgsCache *OrgList
 var FilterLifecycle string
 var FilterEnvironment string
+var WorkerSize int
+
+func SetWorkerSize(w int) {
+	WorkerSize = w
+}
+
+func GetWorkerSize() int {
+	if WorkerSize > 0 {
+		return WorkerSize
+	}
+	return GetWorkerSizeFromConf()
+}
 
 func SetTimeout(t int) {
 	Timeout = t
@@ -541,18 +553,29 @@ func OrgIssueCount(org_id string) []AggregateIssuesResult {
 	var prjs []AggregateIssuesResult
 
 	if ParallelHttpRequests {
-		ch := make(chan IssuesResults)
-		for _, project := range result.Projects {
-			go MakeIssuesCount(org_id, project.Id, ch)
+
+		var full_list []string
+		for _, v := range result.Projects {
+			full_list = append(full_list, v.Id)
 		}
 
-		for _, project := range result.Projects {
-			prj := AggregateIssuesResult{
-				IssuesResults: <-ch,
-				Org:           org_id,
-				Prj:           project.Name,
+		chunks := sliceChunks(full_list, GetWorkerSize())
+
+		ch := make(chan IssuesResults)
+
+		for _, chunk := range chunks {
+			for _, prj_id := range chunk {
+				go MakeIssuesCount(org_id, prj_id, ch)
 			}
-			prjs = append(prjs, prj)
+
+			for _, prj_id := range chunk {
+				prj := AggregateIssuesResult{
+					IssuesResults: <-ch,
+					Org:           org_id,
+					Prj:           prj_id,
+				}
+				prjs = append(prjs, prj)
+			}
 		}
 
 	} else {
@@ -571,3 +594,56 @@ func OrgIssueCount(org_id string) []AggregateIssuesResult {
 	return prjs
 
 }
+
+func sliceChunks(full []string, chunksize int) [][]string {
+	var chunks [][]string
+
+	for i := 0; i < len(full); i += chunksize {
+		end := i + chunksize
+
+		if end > len(full) {
+			end = len(full)
+		}
+
+		chunks = append(chunks, full[i:end])
+	}
+
+	return chunks
+}
+
+// func chunkSlice(slice *ProjectsResult, chunkSize int) [][]string {
+// 	var chunks [][]string
+// 	var chunk []string
+
+// 	count := 0
+
+// 	for _, v := range slice.Projects {
+// 		fmt.Printf("XX %s\n", v.Id)
+// 		chunk := append(chunk, v.Id)
+
+// 		if count == chunkSize {
+// 			count = 0
+// 			chunks = append(chunks, chunk)
+// 			chunk = nil
+// 		}
+// 		count += 1
+// 	}
+
+// 	// add the reminders
+// 	// chunks = append(chunks, chunk)
+
+// 	return chunks
+// 	// for i := 0; i < len(slice); i += chunkSize {
+// 	// 	end := i + chunkSize
+
+// 	// 	// necessary check to avoid slicing beyond
+// 	// 	// slice capacity
+// 	// 	if end > len(slice) {
+// 	// 		end = len(slice)
+// 	// 	}
+
+// 	chunks = append(chunks, slice[i:end])
+// }
+
+// return chunks
+// }
