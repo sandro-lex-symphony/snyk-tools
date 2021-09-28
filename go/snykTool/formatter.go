@@ -9,6 +9,9 @@ var Quiet bool
 var NameOnly bool
 var HtmlFormat bool
 
+const IssuesColSize = 60
+const IssuesCol2Size = 10
+
 func SetQuiet(b bool) {
 	Quiet = b
 }
@@ -84,7 +87,7 @@ func FormatIssuesHtml(issuesList []AggregateIssuesResult) string {
 				v.Prj, result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
 		}
 	}
-	// TODO: count
+	// count
 	out += fmt.Sprintf("<tr><td>TOTAL</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>", c, h, m, l)
 
 	// footer
@@ -100,12 +103,30 @@ func FormatIssuesCli(issuesList []AggregateIssuesResult) string {
 	// each item
 	for _, v := range issuesList {
 		for _, result := range *v.IssuesResults.Results {
+			var col, line string
 			t += 1 // useless, could've got the length
 			c += result.Severity.Critical
 			h += result.Severity.High
 			m += result.Severity.Medium
 			l += result.Severity.Low
-			out += fmt.Sprintf("%s\t\t\t\t%d\t%d\t%d\t%d\n", v.Prj, result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+			line += fmt.Sprintf("%s", v.Prj)
+			line = fillSpaces(line, IssuesColSize, " ")
+			col = fmt.Sprintf("%d", result.Severity.Critical)
+			col = fillSpaces(col, IssuesCol2Size, " ")
+			line += col
+			col = fmt.Sprintf("%d", result.Severity.High)
+			col = fillSpaces(col, IssuesCol2Size, " ")
+			line += col
+			col = fmt.Sprintf("%d", result.Severity.Medium)
+			col = fillSpaces(col, IssuesCol2Size, " ")
+			line += col
+			col = fmt.Sprintf("%d", result.Severity.Low)
+			col = fillSpaces(col, IssuesCol2Size, " ")
+			line += col + "\n"
+
+			// line += fmt.Sprintf("%d\t%d\t%d\t%d\n", result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
+			out += line
+			//out += fmt.Sprintf("%s\t\t\t\t%d\t%d\t%d\t%d\n", v.Prj, result.Severity.Critical, result.Severity.High, result.Severity.Medium, result.Severity.Low)
 		}
 	}
 
@@ -114,7 +135,27 @@ func FormatIssuesCli(issuesList []AggregateIssuesResult) string {
 }
 
 func FormatIssuesResultHeaderCli() string {
-	return "PROJECT\t\t\t\tCRITICAL\tHIGH\tMEDIUM\tLOW\n"
+	var out, col string
+	col = fmt.Sprintf("%s", "PROJECT")
+	col = fillSpaces(col, IssuesColSize, " ")
+	out += col
+
+	col = fmt.Sprintf("%s", "CRITICAL")
+	col = fillSpaces(col, IssuesCol2Size, " ")
+	out += col
+	col = fmt.Sprintf("%s", "HIGH")
+	col = fillSpaces(col, IssuesCol2Size, " ")
+	out += col
+	col = fmt.Sprintf("%s", "MEDIUM")
+	col = fillSpaces(col, IssuesCol2Size, " ")
+	out += col
+	col = fmt.Sprintf("%s", "LOW")
+	col = fillSpaces(col, IssuesCol2Size, " ")
+	out += col + "\n"
+
+	// out += "CRITICAL\tHIGH\tMEDIUM\tLOW\n"
+	return out
+	//return "PROJECT\t\t\t\tCRITICAL\tHIGH\tMEDIUM\tLOW\n"
 }
 
 func FormatIssuesResultCli(r IssuesResults, org_id, prj_id string) string {

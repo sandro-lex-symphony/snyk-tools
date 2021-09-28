@@ -47,7 +47,7 @@ func main() {
 	nameOnlyFlag := flag.Bool("n", false, "Names only output")
 	debugFlag := flag.Bool("d", false, "Debug http requests")
 	timeoutFlag := flag.Int("t", 10, "Http timeout")
-	parallelFlag := flag.Bool("p", false, "(Try to) Run HTTP Requests in parallel")
+	parallelFlag := flag.Bool("p", false, "(Try to) 		Run HTTP Requests in parallel")
 	htmlFlag := flag.Bool("html", false, "Html table")
 	lifecycleFlag := flag.String("lifecycle", "", "prod | dev | sandbox")
 	environmentFlag := flag.String("env", "", "front | back | onprem | mobile")

@@ -22,11 +22,12 @@ func SetTimeout(t int) {
 	Timeout = t
 }
 
+// in case the value was passed in CLI options, ignore the conf
 func GetTimeout() int {
 	if Timeout > 0 {
 		return Timeout
 	}
-	return 10
+	return GetTimeoutFromConf()
 }
 
 func SetDebug(d bool) {
