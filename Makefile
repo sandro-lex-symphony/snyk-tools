@@ -8,6 +8,9 @@ default: install-deps build
 build: bin_dir
 	@go build -o bin/snykctl ./cmd/main.go
 
+install: build
+	@cp bin/snykctl /usr/local/bin/snykctl
+
 bin_dir: 
 	@mkdir -p ./bin
 

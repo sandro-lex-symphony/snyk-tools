@@ -5,38 +5,28 @@
 To get the list of Snyk Orgs:
 ```bash
 snykctl list-orgs
-6c5fdc1f-e675-4321-9bb0-bd7a22a34a51    Mobile-Sandbox
-f6910fd7-43a3-4e20-8327-6b621b7746b3    JDC On Prem
-ecd201fd-2bf1-4ef0-b4b6-2989010b5d47    CS
-d56b0951-e4dd-4139-8556-1987f15757bd    FPT
-f1fb9797-3132-43c7-861b-1925948c3128    Platform
-dc04df24-17fd-42d4-8e80-5c2c5800ec53    Discovery
+6c5fdc1f-e675-4321-9bb0-bd7a22a34a52    Org-1
+f6910fd7-43a3-4e20-8327-6b621b7746b4    Org-2
+ecd201fd-2bf1-4ef0-b4b6-2989010b5d48    Org-3 
+...
 ```
 
 or search for a specific org
 ```bash
 snykctl search-org rele
-8b587d86-66b7-4947-b98c-0242de8b70cd    Release20.5.5
-07dfd36f-9193-40c2-8e44-2d5970231baa    release20.7
-de6ec69b-5528-4e2b-bf20-14f6293cb273    release20.9
-a583250c-36fa-40fe-b71a-abb8e3180993    Release20.9.1
-ed4a4d1b-cc26-46ba-9142-07f88b6a50f4    Release20.12
-c5807011-222a-42c5-bf1f-8660ebfb85a6    ReleaseTest
-6e580461-1720-47da-90e9-7c94b6c0b96f    Release20.10-MT
-4c961058-b36e-4510-894f-99d3f39d3498    Release20.13
-4c986767-9543-43b2-85b9-2747a261fe91    Release 20.10
-711c53b6-a85d-4a51-a34f-42552cc8572e    Release - Current
+8b587d86-66b7-4947-b98c-0242de8b70ce    Release-1
+07dfd36f-9193-40c2-8e44-2d5970231bab    release 2020-10-09
+de6ec69b-5528-4e2b-bf20-14f6293cb274    relegation 
+...
 ```
 
 list projects for a project
 ```bash
-snykctl list-projects 8b587d86-66b7-4947-b98c-0242de8b70cd
-3802e440-e69c-4387-a3a3-9c0a4f2f69fa    com.symphony.sbe.core:malware-scan-client
-8c995d18-5de4-4cb7-90fb-4de229f73be6    com.symphony.sbe.core:cache
-3459efe9-7c3a-45fd-9138-d62661e572bf    com.symphony.sbe.core:retentioncommon
-eac77497-4c16-4db0-94f6-0fa8c8e5ab91    com.symphony.sbe.core:data-common
-404f5b82-2289-47f9-aecb-8b180371cce0    symphony-login
-eb730354-5951-45d1-badb-e5d9b4fdd122    com.symphony.sbe.core:jwt-commons
+snykctl list-projects 8b587d86-66b7-4947-b98c-0242de8b70qc
+3801e440-e69c-4387-a3a3-9c0a4f2f69fa    com.example.backend.core:malware-scan-client
+8c935d18-5de4-4cb7-90fb-4de229f73be6    com.example.backend.core:cache
+3458efe9-7c3a-45fd-9138-d62661e572bf    com.example.backend.core:commons
+...
 ```
 
 ## Basic Features
@@ -63,13 +53,13 @@ eb730354-5951-45d1-badb-e5d9b4fdd122    com.symphony.sbe.core:jwt-commons
 
 ## Instalation
 **Requirements**
-* golang > 1.13
+* golang > 1.17
 * Makefile
 
 ```bash
-make
-cp bin/snykctl /usr/local/bin/
+make install
 ```
+
 
 ## Configure
 snykctl users a configuration file located on ~/.snykctl.conf. 
