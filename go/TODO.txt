@@ -1,3 +1,0 @@
-- add request throtling to avoid 429 on api rate limiting
-- add parallel requests on more endpoints
-- http timeout as configure parameter

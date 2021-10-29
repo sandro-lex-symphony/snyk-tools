@@ -1,4 +1,4 @@
-package snykTool
+package snykctl
 
 import (
 	"fmt"

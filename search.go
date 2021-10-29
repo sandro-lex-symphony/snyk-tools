@@ -1,4 +1,4 @@
-package snykTool
+package snykctl
 
 import (
 	"bytes"
@@ -498,7 +498,13 @@ func MakeIssuesCount(org_id, prj_id string, ch chan<- IssuesResults) {
 	path := "/reporting/counts/issues/latest?groupBy=severity"
 	var str string
 
-	str = fmt.Sprintf("{\"filters\": { \"orgs\": [\"%s\"], \"projects\": [\"%s\"], \"severity\": [\"critical\",\"high\",\"medium\",\"low\"]}}", org_id, prj_id)
+	str = fmt.Sprintf("{\"filters\": "+
+		"{ \"orgs\": [\"%s\"], "+
+		"\"projects\": [\"%s\"], "+
+		// "\"ignored\": true, "+
+		"\"severity\": [\"critical\",\"high\",\"medium\",\"low\"] "+
+		"}}", org_id, prj_id)
+
 	var jsonStr = []byte(str)
 	resp := RequestPost(path, jsonStr)
 	if resp.StatusCode != http.StatusOK {
@@ -576,6 +582,7 @@ func OrgIssueCount(org_id string) []AggregateIssuesResult {
 				}
 				prjs = append(prjs, prj)
 			}
+			// time.Sleep(1 * time.Second)
 		}
 
 	} else {

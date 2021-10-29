@@ -1,4 +1,4 @@
-package snykTool
+package snykctl
 
 const SnykURL = "https://snyk.io/api/v1"
 
