@@ -2,7 +2,7 @@
 
 **A cmd line tool for interacting with snyk API**
 
-To get the list of Snyk Orgs:
+get the list of orgs:
 ```bash
 snykctl list-orgs
 6c5fdc1f-e675-4321-9bb0-bd7a22a34a52    Org-1
@@ -11,7 +11,7 @@ ecd201fd-2bf1-4ef0-b4b6-2989010b5d48    Org-3
 ...
 ```
 
-or search for a specific org
+search for a specific org
 ```bash
 snykctl search-org rele
 8b587d86-66b7-4947-b98c-0242de8b70ce    Release-1
